@@ -285,14 +285,14 @@ const deleteReconciliacion = async (id: number) => {
             No hay gastos registrados para este ciclo de facturación.
           </div>
 
-          <div v-else class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+          <div v-else class="space-y-2 max-h-105 overflow-y-auto pr-1">
             <div
               v-for="g in ciclo.gastos"
               :key="g.id"
               class="p-2.5 rounded-lg border border-muted/15 bg-muted/5 flex items-center justify-between text-xs"
             >
               <div>
-                <span class="font-medium text-foreground block truncate max-w-[150px]">{{ g.descripcion }}</span>
+                <span class="font-medium text-foreground block truncate max-w-37.5">{{ g.descripcion }}</span>
                 <span class="text-[10px] text-muted">{{ formatDate(g.fecha) }} • {{ g.categoria }}</span>
               </div>
               <span class="font-bold text-foreground">{{ formatCurrency(g.monto) }}</span>
@@ -358,7 +358,7 @@ const deleteReconciliacion = async (id: number) => {
                   {{ formatCurrency(rec.diferencia) }}
                 </span>
               </td>
-              <td class="py-3.5 px-4 text-muted max-w-[200px] truncate">
+              <td class="py-3.5 px-4 text-muted max-w-50 truncate">
                 {{ rec.notas || '—' }}
               </td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap">

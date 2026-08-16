@@ -17,8 +17,8 @@ const esTarjetaA = computed(() => props.tarjetaActiva?.codigo === 'A')
     class="relative overflow-hidden rounded-2xl border p-6 sm:p-8 transition-all shadow-lg"
     :class="[
       esTarjetaA
-        ? 'bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-background border-emerald-500/30'
-        : 'bg-gradient-to-br from-indigo-500/15 via-indigo-500/5 to-background border-indigo-500/30'
+        ? 'bg-linear-to-br from-emerald-500/15 via-emerald-500/5 to-background border-emerald-500/30'
+        : 'bg-linear-to-br from-indigo-500/15 via-indigo-500/5 to-background border-indigo-500/30'
     ]"
   >
     <!-- Background Glow Effect -->
