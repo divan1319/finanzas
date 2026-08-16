@@ -52,7 +52,7 @@ export const useFinanzas = () => {
     if (!isoDate) return ''
     const parts = isoDate.split('-')
     if (parts.length < 3) return isoDate
-    const [y, m, d] = parts.map(Number)
+    const [y = 2026, m = 1, d = 1] = parts.map(Number)
     const date = new Date(y, m - 1, d)
     return new Intl.DateTimeFormat('es-MX', {
       day: 'numeric',

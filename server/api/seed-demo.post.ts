@@ -14,10 +14,11 @@ export default defineEventHandler(async () => {
 
   // Actualizar límite a $2,000 USD si está en el default viejo
   const configs = await db.select().from(configuracion)
-  if (configs.length > 0) {
+  const firstConfig = configs[0]
+  if (firstConfig) {
     await db.update(configuracion)
       .set({ limite_gasto_periodo: 2000 })
-      .where(eq(configuracion.id, configs[0].id))
+      .where(eq(configuracion.id, firstConfig.id))
   }
 
   // 2. Limpiar gastos, ingresos y reconciliaciones previas para demo limpio

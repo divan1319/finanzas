@@ -12,13 +12,14 @@ export default defineEventHandler(async (event) => {
     const limite = body.limite_gasto_periodo !== undefined ? Number(body.limite_gasto_periodo) : undefined
 
     const configs = await db.select().from(configuracion)
-    if (configs.length > 0) {
+    const firstConfig = configs[0]
+    if (firstConfig) {
       await db.update(configuracion)
         .set({
           ...(dia !== undefined ? { dia_objetivo_nomina: dia } : {}),
           ...(limite !== undefined ? { limite_gasto_periodo: limite } : {})
         })
-        .where(eq(configuracion.id, configs[0].id))
+        .where(eq(configuracion.id, firstConfig.id))
     } else {
       await db.insert(configuracion).values({
         dia_objetivo_nomina: dia || 26,

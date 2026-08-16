@@ -2,7 +2,7 @@
 const props = defineProps<{
   resumenAhorro: {
     tieneIngreso: boolean
-    ingreso?: { id: number; fecha: string; monto: number; descripcion?: string } | null
+    ingreso?: { id: number; fecha: string; monto: number; descripcion?: string | null; fecha_registro?: string } | null
     totalIngreso: number
     ahorro: number | null
     porcentajeAhorro: number | null

@@ -1,7 +1,20 @@
 import { db, initDatabase } from '../db'
 import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
-import { periodoActual } from '#shared/utils/cicloFinanciero'
+import { periodoActual, type PeriodoRango } from '#shared/utils/cicloFinanciero'
 import { and, gte, lte } from 'drizzle-orm'
+
+export interface ItemHistorial extends PeriodoRango {
+  totalGastado: number
+  gastoTarjetaA: number
+  gastoTarjetaB: number
+  cantidadGastos: number
+  tieneIngreso: boolean
+  totalIngreso: number
+  ahorro: number | null
+  limite: number
+  porcentajeLimite: number
+  cumpleLimite: boolean
+}
 
 export default defineEventHandler(async (event) => {
   await initDatabase()
@@ -19,10 +32,10 @@ export default defineEventHandler(async (event) => {
 
   // Obtener fecha base hoy o consultada
   const fechaBase = (query.fecha as string) || new Date().toISOString().slice(0, 10)
-  const [baseY, baseM, baseD] = fechaBase.split('-').map(Number)
+  const [baseY = 2026, baseM = 1, baseD = 1] = fechaBase.split('-').map(Number)
 
   // Generar lista de los últimos N períodos
-  const periodos = []
+  const periodos: ItemHistorial[] = []
   const hoyDate = new Date(baseY, baseM - 1, baseD, 12, 0, 0)
 
   let iterDate = new Date(hoyDate.getTime())
@@ -86,7 +99,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Retroceder un mes antes del inicio del período actual
-    const [pY, pM] = pInfo.inicio.split('-').map(Number)
+    const [pY = 2026, pM = 1] = pInfo.inicio.split('-').map(Number)
     const prevMonth = pM === 1 ? 12 : pM - 1
     const prevYear = pM === 1 ? pY - 1 : pY
     iterDate = new Date(prevYear, prevMonth - 1, 10, 12, 0, 0)

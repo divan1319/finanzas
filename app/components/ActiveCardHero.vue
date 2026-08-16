@@ -2,7 +2,7 @@
 const props = defineProps<{
   tarjetaActiva: {
     codigo: 'A' | 'B'
-    info?: { id: number; nombre: string; dia_corte: number; dia_pago_propio_tipo: string; color?: string }
+    info?: { id: number; nombre: string; dia_corte: number; dia_pago_propio_tipo: string; color?: string | null }
     proximoCambio?: { tarjetaNueva: 'A' | 'B'; fechaCambio: string; diasFaltantes: number }
   }
 }>()

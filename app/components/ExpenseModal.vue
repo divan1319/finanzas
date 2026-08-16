@@ -2,7 +2,7 @@
 import { tarjetaActivaEn, formatDateISO } from '#shared/utils/cicloFinanciero'
 
 const props = defineProps<{
-  tarjetas?: Array<{ id: number; codigo: 'A' | 'B'; nombre: string; color?: string }>
+  tarjetas?: Array<{ id: number; codigo: string; nombre: string; color?: string | null }>
   diaObjetivoNomina?: number
 }>()
 
@@ -26,7 +26,7 @@ const form = ref({
   id: null as number | null,
   tarjeta_id: undefined as number | undefined,
   fecha: formatDateISO(new Date()),
-  monto: '' as string | number,
+  monto: '',
   descripcion: '',
   categoria: 'Alimentos'
 })
@@ -65,7 +65,7 @@ watch(expenseModalOpen, (open) => {
         id: expenseModalData.value.id || null,
         tarjeta_id: expenseModalData.value.tarjeta_id || tarjetaSugeridaId.value,
         fecha: expenseModalData.value.fecha || formatDateISO(new Date()),
-        monto: expenseModalData.value.monto || '',
+        monto: expenseModalData.value.monto != null ? String(expenseModalData.value.monto) : '',
         descripcion: expenseModalData.value.descripcion || '',
         categoria: expenseModalData.value.categoria || 'Alimentos'
       }

@@ -10,7 +10,7 @@ const toast = useToast()
 
 const form = ref({
   fecha: props.fechaSugerida || formatDateISO(new Date()),
-  monto: '' as string | number,
+  monto: '',
   descripcion: 'Nómina Quincenal / Mensual'
 })
 

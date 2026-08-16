@@ -32,7 +32,7 @@ export function formatDateISO(date: Date): string {
  * Parsea un string YYYY-MM-DD de forma segura a Date en medianoche local
  */
 export function parseISODate(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number)
+  const [y = 2026, m = 1, d = 1] = dateStr.split('-').map(Number)
   return new Date(y, m - 1, d, 12, 0, 0)
 }
 

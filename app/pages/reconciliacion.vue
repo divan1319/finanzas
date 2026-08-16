@@ -6,7 +6,7 @@ const toast = useToast()
 
 const tarjetaCodigo = ref<'A' | 'B'>('A')
 const fechaReferencia = ref(formatDateISO(new Date()))
-const totalBancoInput = ref<string | number>('')
+const totalBancoInput = ref('')
 const notasInput = ref('')
 const saving = ref(false)
 
