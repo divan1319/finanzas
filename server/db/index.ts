@@ -4,14 +4,24 @@ import * as schema from './schema'
 import { existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const dbDir = resolve(process.cwd(), '.data')
-if (!existsSync(dbDir)) {
-  mkdirSync(dbDir, { recursive: true })
-}
+const isTurso = Boolean(process.env.TURSO_DATABASE_URL)
 
-const client = createClient({
-  url: `file:${resolve(dbDir, 'finanzas.db')}`
-})
+let client: ReturnType<typeof createClient>
+
+if (isTurso) {
+  client = createClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN
+  })
+} else {
+  const dbDir = resolve(process.cwd(), '.data')
+  if (!existsSync(dbDir)) {
+    mkdirSync(dbDir, { recursive: true })
+  }
+  client = createClient({
+    url: `file:${resolve(dbDir, 'finanzas.db')}`
+  })
+}
 
 export const db = drizzle(client, { schema })
 
