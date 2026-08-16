@@ -229,32 +229,14 @@ const resetData = async () => {
     <!-- Menú Lateral Desplegable Móvil (Slideover) -->
     <USlideover
       v-model:open="mobileMenuOpen"
-      title="Menú de Navegación"
+      title="Control Tarjetas"
+      description="Gestión financiera activa"
       :ui="{
         header: 'border-b border-default/40 py-4 px-5',
         body: 'p-5 space-y-6',
         footer: 'border-t border-default/40 py-4 px-5'
       }"
     >
-      <template #header>
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center text-white shadow-sm">
-            <UIcon
-              name="i-lucide-credit-card"
-              class="w-5 h-5"
-            />
-          </div>
-          <div>
-            <h3 class="font-bold text-sm leading-tight text-foreground">
-              Control Tarjetas
-            </h3>
-            <p class="text-xs text-muted">
-              Gestión financiera activa
-            </p>
-          </div>
-        </div>
-      </template>
-
       <template #body>
         <div class="space-y-6">
           <!-- Vistas Principales -->
