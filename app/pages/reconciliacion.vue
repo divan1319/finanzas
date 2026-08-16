@@ -20,7 +20,7 @@ const { data: reconciliacionData, pending, refresh } = await useFetch('/api/reco
 
 // Auto-seleccionar la primera tarjeta si no hay ninguna seleccionada
 watch(reconciliacionData, (val) => {
-  if (val?.tarjetas?.length && !tarjetaId.value) {
+  if (val?.tarjetas && val.tarjetas.length > 0 && val.tarjetas[0] && !tarjetaId.value) {
     tarjetaId.value = val.tarjetas[0].id
   }
 }, { immediate: true })
@@ -372,5 +372,5 @@ const deleteReconciliacion = async (id: number) => {
         </table>
       </div>
     </div>
-  </div>
+
 </template>

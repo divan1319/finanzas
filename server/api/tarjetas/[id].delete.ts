@@ -16,13 +16,13 @@ export default defineEventHandler(async (event) => {
 
   // 1. Obtener tarjeta
   const cardList = await db.select().from(tarjetas).where(eq(tarjetas.id, id))
-  if (cardList.length === 0) {
+  const tarjeta = cardList[0]
+  if (!tarjeta) {
     throw createError({
       statusCode: 404,
       statusMessage: 'Tarjeta no encontrada'
     })
   }
-  const tarjeta = cardList[0]
 
   // 2. Comprobar registros históricos en gastos
   const gastosAsociados = await db.select({ id: gastos.id }).from(gastos).where(eq(gastos.tarjeta_id, id))

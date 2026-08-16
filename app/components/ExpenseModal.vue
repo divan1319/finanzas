@@ -2,7 +2,7 @@
 import { tarjetaActivaEn, formatDateISO } from '#shared/utils/cicloFinanciero'
 
 const props = defineProps<{
-  tarjetas?: Array<{ id: number; codigo: string; nombre: string; color?: string | null }>
+  tarjetas?: Array<{ id: number; codigo: string; nombre: string; color?: string | null; dia_corte?: number }>
   diaObjetivoNomina?: number
 }>()
 

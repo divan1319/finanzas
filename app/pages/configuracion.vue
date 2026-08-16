@@ -61,7 +61,7 @@ const colorOptions = [
   { value: 'sky', label: 'Azul Cielo', bgClass: 'bg-sky-500', textClass: 'text-sky-400', borderClass: 'border-sky-500/30' }
 ]
 
-const getCardBorderClass = (color?: string) => {
+const getCardBorderClass = (color?: string | null) => {
   switch (color) {
     case 'indigo': return 'border-indigo-500/25 bg-indigo-500/5'
     case 'amber': return 'border-amber-500/25 bg-amber-500/5'
@@ -76,7 +76,7 @@ const getCardBorderClass = (color?: string) => {
   }
 }
 
-const getCardDotClass = (color?: string) => {
+const getCardDotClass = (color?: string | null) => {
   switch (color) {
     case 'indigo': return 'bg-indigo-500'
     case 'amber': return 'bg-amber-500'
@@ -94,10 +94,16 @@ const getCardDotClass = (color?: string) => {
 // Modal Agregar Tarjeta
 const addCardModalOpen = ref(false)
 const addingCard = ref(false)
-const newCardForm = ref({
+const newCardForm = ref<{
+  nombre: string
+  dia_corte: number
+  dia_vencimiento_pago: number | undefined
+  dia_pago_propio_tipo: string
+  color: string
+}>({
   nombre: '',
   dia_corte: 5,
-  dia_vencimiento_pago: '' as number | string,
+  dia_vencimiento_pago: undefined,
   dia_pago_propio_tipo: 'dia_siguiente_corte',
   color: 'emerald'
 })
@@ -106,7 +112,7 @@ const openAddCardModal = () => {
   newCardForm.value = {
     nombre: '',
     dia_corte: 5,
-    dia_vencimiento_pago: '',
+    dia_vencimiento_pago: undefined,
     dia_pago_propio_tipo: 'dia_siguiente_corte',
     color: 'emerald'
   }
@@ -155,11 +161,18 @@ const submitAddCard = async () => {
 // Modal Editar Tarjeta
 const editCardModalOpen = ref(false)
 const editingCard = ref(false)
-const editCardForm = ref({
+const editCardForm = ref<{
+  id: number
+  nombre: string
+  dia_corte: number
+  dia_vencimiento_pago: number | undefined
+  dia_pago_propio_tipo: string
+  color: string
+}>({
   id: 0,
   nombre: '',
   dia_corte: 5,
-  dia_vencimiento_pago: '' as number | string,
+  dia_vencimiento_pago: undefined,
   dia_pago_propio_tipo: 'dia_siguiente_corte',
   color: 'emerald'
 })
@@ -169,7 +182,7 @@ const openEditCardModal = (card: any) => {
     id: card.id,
     nombre: card.nombre,
     dia_corte: card.dia_corte,
-    dia_vencimiento_pago: card.dia_vencimiento_pago || '',
+    dia_vencimiento_pago: card.dia_vencimiento_pago || undefined,
     dia_pago_propio_tipo: card.dia_pago_propio_tipo || 'dia_siguiente_corte',
     color: card.color || 'emerald'
   }
@@ -252,7 +265,7 @@ const confirmDeleteCard = async () => {
     deleteErrorMessage.value = err?.statusMessage || err?.message || 'No se puede eliminar la tarjeta.'
     toast.add({
       title: 'No se puede eliminar',
-      description: deleteErrorMessage.value,
+      description: deleteErrorMessage.value || undefined,
       color: 'error'
     })
   } finally {
