@@ -54,6 +54,24 @@ const navItems = computed<NavigationMenuItem[]>(() => [
   }
 ])
 
+const { clear: clearSession } = useUserSession()
+
+const handleLogout = async () => {
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+    await clearSession()
+    toast.add({
+      title: 'Sesión finalizada',
+      description: 'Has cerrado sesión con éxito.',
+      color: 'info',
+      icon: 'i-lucide-log-out'
+    })
+    await navigateTo('/login')
+  } catch (err: unknown) {
+    console.error('Error al cerrar sesión', err)
+  }
+}
+
 const actionItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
@@ -80,6 +98,14 @@ const actionItems = computed<DropdownMenuItem[][]>(() => [
       onSelect: () => {
         confirmResetModalOpen.value = true
       }
+    }
+  ],
+  [
+    {
+      label: 'Cerrar Sesión',
+      icon: 'i-lucide-log-out',
+      color: 'neutral',
+      onSelect: () => handleLogout()
     }
   ]
 ])
@@ -300,6 +326,18 @@ const resetData = async () => {
                 @click="() => { mobileMenuOpen = false; confirmResetModalOpen = true; }"
               />
             </div>
+          </div>
+
+          <!-- Seguridad y Sesión -->
+          <div class="pt-4 border-t border-default/40">
+            <UButton
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-log-out"
+              label="Cerrar Sesión"
+              block
+              @click="() => { mobileMenuOpen = false; handleLogout(); }"
+            />
           </div>
         </div>
       </template>

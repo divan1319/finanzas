@@ -3,7 +3,8 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    '@vite-pwa/nuxt'
+    '@vite-pwa/nuxt',
+    'nuxt-auth-utils'
   ],
 
   pwa: {
@@ -54,6 +55,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
+    appPassword: process.env.APP_PASSWORD || 'admin123',
     tursoDatabaseUrl: process.env.TURSO_DATABASE_URL || '',
     tursoAuthToken: process.env.TURSO_AUTH_TOKEN || ''
   },
