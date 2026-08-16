@@ -38,7 +38,7 @@ const handleLogin = async () => {
 
     await navigateTo('/')
   } catch (err: any) {
-    errorMessage.value = err?.data?.statusMessage || err?.statusMessage || 'Contraseña incorrecta. Inténtalo de nuevo.'
+    errorMessage.value = err?.data?.message || err?.message || 'Contraseña incorrecta. Inténtalo de nuevo.'
   } finally {
     loading.value = false
   }
