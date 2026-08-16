@@ -76,7 +76,6 @@ const resetData = async () => {
           </div>
           <div>
             <span class="font-black text-base tracking-tight block">Control Tarjetas</span>
-            <span class="text-[10px] text-muted block -mt-1 font-medium tracking-wider uppercase">Finanzas Inteligentes</span>
           </div>
         </NuxtLink>
 
