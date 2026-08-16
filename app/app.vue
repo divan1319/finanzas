@@ -4,11 +4,16 @@ const { refreshKey } = useFinanzas()
 useHead({
   title: 'Control por Tarjeta Activa | Finanzas Personales',
   meta: [
-    { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-    { name: 'description', content: 'Control inteligente de tarjetas de crédito y presupuesto por período de nómina.' }
+    { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' },
+    { name: 'description', content: 'Control inteligente de tarjetas de crédito y presupuesto por período de nómina.' },
+    { name: 'theme-color', content: '#0f172a' },
+    { name: 'apple-mobile-web-app-capable', content: 'yes' },
+    { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+    { name: 'apple-mobile-web-app-title', content: 'Finanzas' }
   ],
   link: [
-    { rel: 'icon', href: '/favicon.ico' }
+    { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' },
+    { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }
   ],
   htmlAttrs: {
     lang: 'es'
@@ -34,5 +39,8 @@ const { data: configData } = await useFetch('/api/configuracion', {
       :dia-objetivo-nomina="configData?.configuracion?.dia_objetivo_nomina"
     />
     <IncomeModal />
+
+    <!-- Inyección automática del Manifiesto PWA -->
+    <VitePwaManifest />
   </UApp>
 </template>
