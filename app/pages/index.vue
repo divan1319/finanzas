@@ -131,11 +131,11 @@ const deleteGasto = async (id: number) => {
                 </td>
                 <td class="py-3 px-3 whitespace-nowrap">
                   <UBadge
-                    :color="gasto.tarjeta?.codigo === 'A' ? 'success' : 'info'"
+                    :color="gasto.tarjeta?.color === 'indigo' ? 'info' : (gasto.tarjeta?.color === 'amber' ? 'warning' : (gasto.tarjeta?.color === 'rose' || gasto.tarjeta?.color === 'red' ? 'error' : 'success'))"
                     variant="subtle"
                     size="sm"
                   >
-                    Tarjeta {{ gasto.tarjeta?.codigo || '?' }}
+                    {{ gasto.tarjeta?.nombre || 'Tarjeta' }}
                   </UBadge>
                 </td>
                 <td class="py-3 px-3 font-medium text-foreground max-w-[200px] truncate">

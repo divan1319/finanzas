@@ -85,16 +85,21 @@ const { data: historialData, pending, refresh } = await useFetch('/api/historial
             <span class="text-[11px] text-muted">{{ p.cantidadGastos }} movimientos</span>
           </div>
 
-          <!-- Desglose Tarjetas -->
+          <!-- Desglose Tarjetas Dinámico -->
           <div class="p-3 rounded-xl bg-muted/10 space-y-1">
             <span class="text-muted block">Por Tarjeta</span>
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-emerald-500 font-medium">Tarjeta A:</span>
-              <span class="font-bold">{{ formatCurrency(p.gastoTarjetaA) }}</span>
+            <div
+              v-for="t in (p.desgloseTarjetas || [])"
+              :key="t.id"
+              class="flex items-center justify-between text-[11px]"
+            >
+              <span class="truncate pr-1 font-medium" :class="t.color === 'indigo' ? 'text-indigo-400' : (t.color === 'amber' ? 'text-amber-400' : (t.color === 'rose' || t.color === 'red' ? 'text-rose-400' : 'text-emerald-400'))">
+                {{ t.nombre }}:
+              </span>
+              <span class="font-bold whitespace-nowrap">{{ formatCurrency(t.total) }}</span>
             </div>
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-indigo-500 font-medium">Tarjeta B:</span>
-              <span class="font-bold">{{ formatCurrency(p.gastoTarjetaB) }}</span>
+            <div v-if="!p.desgloseTarjetas || p.desgloseTarjetas.length === 0" class="text-[11px] text-muted">
+              {{ formatCurrency(p.totalGastado) }}
             </div>
           </div>
 
@@ -143,12 +148,12 @@ const { data: historialData, pending, refresh } = await useFetch('/api/historial
         <div v-if="p.totalGastado > 0" class="pt-1">
           <div class="w-full bg-muted/20 rounded-full h-1.5 overflow-hidden flex">
             <div
-              class="bg-emerald-500 h-full"
-              :style="{ width: `${Math.round((p.gastoTarjetaA / p.totalGastado) * 100)}%` }"
-            />
-            <div
-              class="bg-indigo-500 h-full"
-              :style="{ width: `${Math.round((p.gastoTarjetaB / p.totalGastado) * 100)}%` }"
+              v-for="t in (p.desgloseTarjetas || [])"
+              :key="t.id"
+              class="h-full transition-all"
+              :class="t.color === 'indigo' ? 'bg-indigo-500' : (t.color === 'amber' ? 'bg-amber-500' : (t.color === 'rose' || t.color === 'red' ? 'bg-rose-500' : (t.color === 'sky' || t.color === 'blue' ? 'bg-sky-500' : 'bg-emerald-500')))"
+              :style="{ width: `${t.porcentaje}%` }"
+              :title="`${t.nombre}: ${t.porcentaje}%`"
             />
           </div>
         </div>

@@ -6,10 +6,13 @@ import { eq, desc, and, gte, lte } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
   await initDatabase()
   const query = getQuery(event)
-  const tarjetaCodigo = query.tarjeta_codigo as 'A' | 'B' | undefined
+  const tarjetaIdQuery = query.tarjeta_id ? Number(query.tarjeta_id) : undefined
+  const tarjetaCodigo = query.tarjeta_codigo as string | undefined
   const fechaConsulta = (query.fecha as string) || new Date().toISOString().slice(0, 10)
 
-  // 1. Obtener reconciliaciones históricas
+  // 1. Obtener todas las tarjetas y reconciliaciones históricas
+  const todasLasTarjetas = await db.select().from(tarjetas)
+
   const historialRaw = await db.select({
     id: reconciliaciones.id,
     tarjeta_id: reconciliaciones.tarjeta_id,
@@ -33,37 +36,38 @@ export default defineEventHandler(async (event) => {
   let gastosDelCiclo: any[] = []
   let totalCalculadoCiclo = 0
 
-  if (tarjetaCodigo === 'A' || tarjetaCodigo === 'B') {
-    const infoCiclo = cicloFacturacion(tarjetaCodigo, fechaConsulta)
-    const tarjetasResult = await db.select().from(tarjetas).where(eq(tarjetas.codigo, tarjetaCodigo))
-    const tarjeta = tarjetasResult[0]
+  let tarjetaSeleccionada = tarjetaIdQuery
+    ? todasLasTarjetas.find(t => t.id === tarjetaIdQuery)
+    : (tarjetaCodigo ? todasLasTarjetas.find(t => t.codigo === tarjetaCodigo) : todasLasTarjetas[0])
 
-    if (tarjeta) {
-      gastosDelCiclo = await db.select()
-        .from(gastos)
-        .where(
-          and(
-            eq(gastos.tarjeta_id, tarjeta.id),
-            gte(gastos.fecha, infoCiclo.inicio),
-            lte(gastos.fecha, infoCiclo.fin)
-          )
+  if (tarjetaSeleccionada) {
+    const infoCiclo = cicloFacturacion(tarjetaSeleccionada.dia_corte, fechaConsulta)
+
+    gastosDelCiclo = await db.select()
+      .from(gastos)
+      .where(
+        and(
+          eq(gastos.tarjeta_id, tarjetaSeleccionada.id),
+          gte(gastos.fecha, infoCiclo.inicio),
+          lte(gastos.fecha, infoCiclo.fin)
         )
-        .orderBy(desc(gastos.fecha))
+      )
+      .orderBy(desc(gastos.fecha))
 
-      totalCalculadoCiclo = gastosDelCiclo.reduce((sum, g) => sum + g.monto, 0)
+    totalCalculadoCiclo = gastosDelCiclo.reduce((sum, g) => sum + g.monto, 0)
 
-      cicloCalculado = {
-        tarjeta,
-        ...infoCiclo,
-        totalApp: totalCalculadoCiclo,
-        cantidadGastos: gastosDelCiclo.length,
-        gastos: gastosDelCiclo
-      }
+    cicloCalculado = {
+      tarjeta: tarjetaSeleccionada,
+      ...infoCiclo,
+      totalApp: totalCalculadoCiclo,
+      cantidadGastos: gastosDelCiclo.length,
+      gastos: gastosDelCiclo
     }
   }
 
   return {
     historial: historialRaw,
-    cicloCalculado
+    cicloCalculado,
+    tarjetas: todasLasTarjetas
   }
 })

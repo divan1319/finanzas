@@ -3,10 +3,20 @@ import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
 import { periodoActual, type PeriodoRango } from '#shared/utils/cicloFinanciero'
 import { and, gte, lte } from 'drizzle-orm'
 
+export interface ItemHistorialDesgloseTarjeta {
+  id: number
+  nombre: string
+  codigo: string
+  color: string
+  total: number
+  porcentaje: number
+}
+
 export interface ItemHistorial extends PeriodoRango {
   totalGastado: number
   gastoTarjetaA: number
   gastoTarjetaB: number
+  desgloseTarjetas: ItemHistorialDesgloseTarjeta[]
   cantidadGastos: number
   tieneIngreso: boolean
   totalIngreso: number
@@ -59,13 +69,27 @@ export default defineEventHandler(async (event) => {
       let gastoTarjetaA = 0
       let gastoTarjetaB = 0
       let totalGastado = 0
+      const mapGastosTarjeta = new Map<number, number>()
 
       for (const g of gastosPeriodo) {
         totalGastado += g.monto
+        mapGastosTarjeta.set(g.tarjeta_id, (mapGastosTarjeta.get(g.tarjeta_id) || 0) + g.monto)
         const t = mapTarjetas.get(g.tarjeta_id)
         if (t?.codigo === 'A') gastoTarjetaA += g.monto
         else if (t?.codigo === 'B') gastoTarjetaB += g.monto
       }
+
+      const desgloseTarjetas = listaTarjetas.map(t => {
+        const total = mapGastosTarjeta.get(t.id) || 0
+        return {
+          id: t.id,
+          nombre: t.nombre,
+          codigo: t.codigo,
+          color: t.color || 'emerald',
+          total,
+          porcentaje: totalGastado > 0 ? Math.round((total / totalGastado) * 100) : 0
+        }
+      })
 
       // Obtener ingresos de ese período
       const ingresosPeriodo = await db.select()
@@ -88,6 +112,7 @@ export default defineEventHandler(async (event) => {
         totalGastado,
         gastoTarjetaA,
         gastoTarjetaB,
+        desgloseTarjetas,
         cantidadGastos: gastosPeriodo.length,
         tieneIngreso,
         totalIngreso,

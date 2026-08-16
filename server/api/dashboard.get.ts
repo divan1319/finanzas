@@ -42,10 +42,13 @@ export default defineEventHandler(async (event) => {
   let totalGastadoPeriodo = 0
   let gastoTarjetaA = 0
   let gastoTarjetaB = 0
+  const gastosPorTarjetaMap = new Map<number, number>()
   const categoriasMap = new Map<string, number>()
 
   for (const g of gastosPeriodo) {
     totalGastadoPeriodo += g.monto
+    gastosPorTarjetaMap.set(g.tarjeta_id, (gastosPorTarjetaMap.get(g.tarjeta_id) || 0) + g.monto)
+
     const t = mapTarjetas.get(g.tarjeta_id)
     if (t?.codigo === 'A') {
       gastoTarjetaA += g.monto
@@ -56,6 +59,21 @@ export default defineEventHandler(async (event) => {
     const cat = g.categoria || 'Otros'
     categoriasMap.set(cat, (categoriasMap.get(cat) || 0) + g.monto)
   }
+
+  const desgloseTarjetas = listaTarjetas.map(t => {
+    const total = gastosPorTarjetaMap.get(t.id) || 0
+    return {
+      id: t.id,
+      nombre: t.nombre,
+      codigo: t.codigo,
+      color: t.color || 'emerald',
+      dia_corte: t.dia_corte,
+      dia_pago_propio_tipo: t.dia_pago_propio_tipo,
+      dia_vencimiento_pago: t.dia_vencimiento_pago,
+      total,
+      porcentaje: totalGastadoPeriodo > 0 ? Math.round((total / totalGastadoPeriodo) * 100) : 0
+    }
+  })
 
   const limite = config.limite_gasto_periodo
   const porcentajeLimite = limite > 0 ? Math.round((totalGastadoPeriodo / limite) * 100) : 0
@@ -102,6 +120,8 @@ export default defineEventHandler(async (event) => {
     tarjeta: mapTarjetas.get(g.tarjeta_id)
   }))
 
+  const tarjetaNuevaInfo = listaTarjetas.find(t => t.codigo === proximoCambio.tarjetaNueva)
+
   return {
     fechaConsulta,
     config,
@@ -109,9 +129,13 @@ export default defineEventHandler(async (event) => {
     tarjetaActiva: {
       codigo: codigoTarjetaActiva,
       info: infoTarjetaActiva,
-      proximoCambio
+      proximoCambio: {
+        ...proximoCambio,
+        tarjetaNuevaNombre: tarjetaNuevaInfo?.nombre || `Tarjeta ${proximoCambio.tarjetaNueva}`
+      }
     },
     periodo,
+    desgloseTarjetas,
     resumenGasto: {
       limite,
       totalGastado: totalGastadoPeriodo,
@@ -121,7 +145,8 @@ export default defineEventHandler(async (event) => {
       gastoTarjetaA,
       gastoTarjetaB,
       porcentajeTarjetaA: totalGastadoPeriodo > 0 ? Math.round((gastoTarjetaA / totalGastadoPeriodo) * 100) : 0,
-      porcentajeTarjetaB: totalGastadoPeriodo > 0 ? Math.round((gastoTarjetaB / totalGastadoPeriodo) * 100) : 0
+      porcentajeTarjetaB: totalGastadoPeriodo > 0 ? Math.round((gastoTarjetaB / totalGastadoPeriodo) * 100) : 0,
+      desgloseTarjetas
     },
     resumenAhorro: {
       tieneIngreso,

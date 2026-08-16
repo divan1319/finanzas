@@ -188,21 +188,21 @@ const submitGasto = async () => {
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="block text-sm font-medium text-muted">Tarjeta de Pago</label>
-            <div v-if="tarjetaSugeridaCodigo" class="flex items-center gap-1.5 text-xs">
-              <span class="text-muted">Activa en esta fecha:</span>
+            <div v-if="tarjetaSugeridaId" class="flex items-center gap-1.5 text-xs">
+              <span class="text-muted">Sugerida:</span>
               <UBadge
-                :color="tarjetaSugeridaCodigo === 'A' ? 'success' : 'info'"
+                color="primary"
                 variant="subtle"
                 size="sm"
                 class="cursor-pointer"
                 @click="aplicarSugerida"
               >
-                Tarjeta {{ tarjetaSugeridaCodigo }}
+                {{ props.tarjetas?.find(c => c.id === tarjetaSugeridaId)?.nombre || 'Activa' }}
               </UBadge>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               v-for="t in props.tarjetas"
               :key="t.id"
@@ -216,20 +216,22 @@ const submitGasto = async () => {
               @click="onTarjetaSelectChange(t.id)"
             >
               <div class="flex items-center justify-between w-full">
-                <span class="font-semibold text-sm">Tarjeta {{ t.codigo }}</span>
+                <span class="font-semibold text-sm truncate text-foreground">{{ t.nombre }}</span>
                 <UIcon
                   v-if="form.tarjeta_id === t.id"
                   name="i-lucide-check-circle-2"
-                  class="w-4 h-4 text-primary shrink-0"
+                  class="w-4 h-4 text-primary shrink-0 ml-1"
                 />
               </div>
-              <span class="text-xs text-muted mt-1 truncate">{{ t.nombre }}</span>
-              <span
-                v-if="t.codigo === tarjetaSugeridaCodigo"
-                class="text-[10px] font-medium text-primary mt-1 flex items-center gap-1"
-              >
-                <UIcon name="i-lucide-sparkles" class="w-3 h-3" /> Sugerida por fecha
-              </span>
+              <div class="flex items-center justify-between mt-1 text-xs text-muted">
+                <span>Corte día {{ t.dia_corte }}</span>
+                <span
+                  v-if="t.id === tarjetaSugeridaId"
+                  class="text-[10px] font-medium text-primary flex items-center gap-1"
+                >
+                  <UIcon name="i-lucide-sparkles" class="w-3 h-3" /> Recomendada
+                </span>
+              </div>
             </button>
           </div>
         </div>

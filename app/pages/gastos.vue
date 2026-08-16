@@ -124,7 +124,7 @@ const deleteGasto = async (id: number) => {
               :key="t.id"
               :value="String(t.id)"
             >
-              Tarjeta {{ t.codigo }} ({{ t.nombre }})
+              {{ t.nombre }}
             </option>
           </select>
         </div>
@@ -220,11 +220,11 @@ const deleteGasto = async (id: number) => {
               </td>
               <td class="py-3.5 px-4 whitespace-nowrap">
                 <UBadge
-                  :color="g.tarjeta_codigo === 'A' ? 'success' : 'info'"
+                  :color="g.tarjeta_color === 'indigo' ? 'info' : (g.tarjeta_color === 'amber' ? 'warning' : (g.tarjeta_color === 'rose' || g.tarjeta_color === 'red' ? 'error' : 'success'))"
                   variant="subtle"
                   size="sm"
                 >
-                  Tarjeta {{ g.tarjeta_codigo }}
+                  {{ g.tarjeta_nombre }}
                 </UBadge>
               </td>
               <td class="py-3.5 px-4 font-medium text-foreground max-w-[260px] truncate">

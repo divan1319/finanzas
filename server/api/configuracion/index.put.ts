@@ -36,7 +36,8 @@ export default defineEventHandler(async (event) => {
           .set({
             ...(t.nombre ? { nombre: t.nombre } : {}),
             ...(t.dia_corte !== undefined ? { dia_corte: Number(t.dia_corte) } : {}),
-            ...(t.dia_vencimiento_pago !== undefined ? { dia_vencimiento_pago: Number(t.dia_vencimiento_pago) } : {}),
+            ...(t.dia_pago_propio_tipo !== undefined ? { dia_pago_propio_tipo: t.dia_pago_propio_tipo } : {}),
+            ...(t.dia_vencimiento_pago !== undefined ? { dia_vencimiento_pago: t.dia_vencimiento_pago === null || t.dia_vencimiento_pago === '' ? null : Number(t.dia_vencimiento_pago) } : {}),
             ...(t.color ? { color: t.color } : {})
           })
           .where(eq(tarjetas.id, t.id))

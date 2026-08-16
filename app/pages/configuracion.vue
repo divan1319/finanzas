@@ -6,79 +6,34 @@ const { data: configData, pending, refresh } = await useFetch('/api/configuracio
   watch: [refreshKey]
 })
 
-const form = ref({
+// Formulario de Reglas Globales (Nómina y Límite)
+const formGlobal = ref({
   dia_objetivo_nomina: 26,
-  limite_gasto_periodo: 15000,
-  tarjetaA: {
-    id: 1,
-    nombre: 'Tarjeta A (Corte 5 / Paga 6)',
-    dia_corte: 5,
-    dia_vencimiento_pago: 30
-  },
-  tarjetaB: {
-    id: 2,
-    nombre: 'Tarjeta B (Corte 9 / Paga Nómina)',
-    dia_corte: 9,
-    dia_vencimiento_pago: 3
-  }
+  limite_gasto_periodo: 15000
 })
 
 watch(configData, (val) => {
-  if (val) {
-    form.value.dia_objetivo_nomina = val.configuracion.dia_objetivo_nomina
-    form.value.limite_gasto_periodo = val.configuracion.limite_gasto_periodo
-
-    const tA = val.tarjetas.find(t => t.codigo === 'A')
-    if (tA) {
-      form.value.tarjetaA = {
-        id: tA.id,
-        nombre: tA.nombre,
-        dia_corte: tA.dia_corte,
-        dia_vencimiento_pago: tA.dia_vencimiento_pago || 30
-      }
-    }
-
-    const tB = val.tarjetas.find(t => t.codigo === 'B')
-    if (tB) {
-      form.value.tarjetaB = {
-        id: tB.id,
-        nombre: tB.nombre,
-        dia_corte: tB.dia_corte,
-        dia_vencimiento_pago: tB.dia_vencimiento_pago || 3
-      }
-    }
+  if (val?.configuracion) {
+    formGlobal.value.dia_objetivo_nomina = val.configuracion.dia_objetivo_nomina
+    formGlobal.value.limite_gasto_periodo = val.configuracion.limite_gasto_periodo
   }
 }, { immediate: true })
 
-const saving = ref(false)
-const guardarConfiguracion = async () => {
-  saving.value = true
+const savingGlobal = ref(false)
+const guardarReglasGlobales = async () => {
+  savingGlobal.value = true
   try {
     await $fetch('/api/configuracion', {
       method: 'PUT',
       body: {
-        dia_objetivo_nomina: Number(form.value.dia_objetivo_nomina),
-        limite_gasto_periodo: Number(form.value.limite_gasto_periodo),
-        tarjetas: [
-          {
-            id: form.value.tarjetaA.id,
-            nombre: form.value.tarjetaA.nombre,
-            dia_corte: Number(form.value.tarjetaA.dia_corte),
-            dia_vencimiento_pago: Number(form.value.tarjetaA.dia_vencimiento_pago)
-          },
-          {
-            id: form.value.tarjetaB.id,
-            nombre: form.value.tarjetaB.nombre,
-            dia_corte: Number(form.value.tarjetaB.dia_corte),
-            dia_vencimiento_pago: Number(form.value.tarjetaB.dia_vencimiento_pago)
-          }
-        ]
+        dia_objetivo_nomina: Number(formGlobal.value.dia_objetivo_nomina),
+        limite_gasto_periodo: Number(formGlobal.value.limite_gasto_periodo)
       }
     })
 
     toast.add({
       title: 'Configuración guardada',
-      description: 'Los parámetros han sido actualizados.',
+      description: 'Los parámetros de nómina y presupuesto se han actualizado.',
       color: 'success',
       icon: 'i-lucide-check'
     })
@@ -88,14 +43,224 @@ const guardarConfiguracion = async () => {
   } catch (err: any) {
     toast.add({
       title: 'Error al guardar',
-      description: err?.message,
+      description: err?.message || 'No se pudo guardar la configuración',
       color: 'error'
     })
   } finally {
-    saving.value = false
+    savingGlobal.value = false
   }
 }
 
+// Colores disponibles para tarjetas
+const colorOptions = [
+  { value: 'emerald', label: 'Esmeralda', bgClass: 'bg-emerald-500', textClass: 'text-emerald-400', borderClass: 'border-emerald-500/30' },
+  { value: 'indigo', label: 'Índigo', bgClass: 'bg-indigo-500', textClass: 'text-indigo-400', borderClass: 'border-indigo-500/30' },
+  { value: 'amber', label: 'Ámbar / Dorado', bgClass: 'bg-amber-500', textClass: 'text-amber-400', borderClass: 'border-amber-500/30' },
+  { value: 'violet', label: 'Violeta / Púrpura', bgClass: 'bg-violet-500', textClass: 'text-violet-400', borderClass: 'border-violet-500/30' },
+  { value: 'rose', label: 'Rosa / Carmín', bgClass: 'bg-rose-500', textClass: 'text-rose-400', borderClass: 'border-rose-500/30' },
+  { value: 'sky', label: 'Azul Cielo', bgClass: 'bg-sky-500', textClass: 'text-sky-400', borderClass: 'border-sky-500/30' }
+]
+
+const getCardBorderClass = (color?: string) => {
+  switch (color) {
+    case 'indigo': return 'border-indigo-500/25 bg-indigo-500/5'
+    case 'amber': return 'border-amber-500/25 bg-amber-500/5'
+    case 'violet':
+    case 'purple': return 'border-violet-500/25 bg-violet-500/5'
+    case 'rose':
+    case 'red': return 'border-rose-500/25 bg-rose-500/5'
+    case 'sky':
+    case 'cyan':
+    case 'blue': return 'border-sky-500/25 bg-sky-500/5'
+    default: return 'border-emerald-500/25 bg-emerald-500/5'
+  }
+}
+
+const getCardDotClass = (color?: string) => {
+  switch (color) {
+    case 'indigo': return 'bg-indigo-500'
+    case 'amber': return 'bg-amber-500'
+    case 'violet':
+    case 'purple': return 'bg-violet-500'
+    case 'rose':
+    case 'red': return 'bg-rose-500'
+    case 'sky':
+    case 'cyan':
+    case 'blue': return 'bg-sky-500'
+    default: return 'bg-emerald-500'
+  }
+}
+
+// Modal Agregar Tarjeta
+const addCardModalOpen = ref(false)
+const addingCard = ref(false)
+const newCardForm = ref({
+  nombre: '',
+  dia_corte: 5,
+  dia_vencimiento_pago: '' as number | string,
+  dia_pago_propio_tipo: 'dia_siguiente_corte',
+  color: 'emerald'
+})
+
+const openAddCardModal = () => {
+  newCardForm.value = {
+    nombre: '',
+    dia_corte: 5,
+    dia_vencimiento_pago: '',
+    dia_pago_propio_tipo: 'dia_siguiente_corte',
+    color: 'emerald'
+  }
+  addCardModalOpen.value = true
+}
+
+const submitAddCard = async () => {
+  if (!newCardForm.value.nombre.trim()) {
+    toast.add({ title: 'Nombre requerido', description: 'Por favor ingresa un nombre para la tarjeta.', color: 'warning' })
+    return
+  }
+  addingCard.value = true
+  try {
+    await $fetch('/api/tarjetas', {
+      method: 'POST',
+      body: {
+        nombre: newCardForm.value.nombre.trim(),
+        dia_corte: Number(newCardForm.value.dia_corte),
+        dia_vencimiento_pago: newCardForm.value.dia_vencimiento_pago ? Number(newCardForm.value.dia_vencimiento_pago) : null,
+        dia_pago_propio_tipo: newCardForm.value.dia_pago_propio_tipo,
+        color: newCardForm.value.color
+      }
+    })
+
+    toast.add({
+      title: 'Tarjeta Agregada',
+      description: `Se creó "${newCardForm.value.nombre}" exitosamente.`,
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+
+    addCardModalOpen.value = false
+    triggerRefresh()
+    refresh()
+  } catch (err: any) {
+    toast.add({
+      title: 'Error al crear tarjeta',
+      description: err?.statusMessage || err?.message || 'No se pudo agregar la tarjeta.',
+      color: 'error'
+    })
+  } finally {
+    addingCard.value = false
+  }
+}
+
+// Modal Editar Tarjeta
+const editCardModalOpen = ref(false)
+const editingCard = ref(false)
+const editCardForm = ref({
+  id: 0,
+  nombre: '',
+  dia_corte: 5,
+  dia_vencimiento_pago: '' as number | string,
+  dia_pago_propio_tipo: 'dia_siguiente_corte',
+  color: 'emerald'
+})
+
+const openEditCardModal = (card: any) => {
+  editCardForm.value = {
+    id: card.id,
+    nombre: card.nombre,
+    dia_corte: card.dia_corte,
+    dia_vencimiento_pago: card.dia_vencimiento_pago || '',
+    dia_pago_propio_tipo: card.dia_pago_propio_tipo || 'dia_siguiente_corte',
+    color: card.color || 'emerald'
+  }
+  editCardModalOpen.value = true
+}
+
+const submitEditCard = async () => {
+  if (!editCardForm.value.nombre.trim()) {
+    toast.add({ title: 'Nombre requerido', description: 'Por favor ingresa un nombre para la tarjeta.', color: 'warning' })
+    return
+  }
+  editingCard.value = true
+  try {
+    await $fetch(`/api/tarjetas/${editCardForm.value.id}`, {
+      method: 'PUT',
+      body: {
+        nombre: editCardForm.value.nombre.trim(),
+        dia_corte: Number(editCardForm.value.dia_corte),
+        dia_vencimiento_pago: editCardForm.value.dia_vencimiento_pago ? Number(editCardForm.value.dia_vencimiento_pago) : null,
+        dia_pago_propio_tipo: editCardForm.value.dia_pago_propio_tipo,
+        color: editCardForm.value.color
+      }
+    })
+
+    toast.add({
+      title: 'Tarjeta Actualizada',
+      description: `Los cambios para "${editCardForm.value.nombre}" fueron guardados.`,
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+
+    editCardModalOpen.value = false
+    triggerRefresh()
+    refresh()
+  } catch (err: any) {
+    toast.add({
+      title: 'Error al actualizar',
+      description: err?.statusMessage || err?.message || 'No se pudo actualizar la tarjeta.',
+      color: 'error'
+    })
+  } finally {
+    editingCard.value = false
+  }
+}
+
+// Modal y Manejo de Eliminación con Validación
+const deleteModalOpen = ref(false)
+const cardToDelete = ref<any>(null)
+const deletingCard = ref(false)
+const deleteErrorMessage = ref<string | null>(null)
+
+const openDeleteCardModal = (card: any) => {
+  cardToDelete.value = card
+  deleteErrorMessage.value = null
+  deleteModalOpen.value = true
+}
+
+const confirmDeleteCard = async () => {
+  if (!cardToDelete.value) return
+  deletingCard.value = true
+  deleteErrorMessage.value = null
+
+  try {
+    await $fetch(`/api/tarjetas/${cardToDelete.value.id}`, {
+      method: 'DELETE'
+    })
+
+    toast.add({
+      title: 'Tarjeta Eliminada',
+      description: `La tarjeta "${cardToDelete.value.nombre}" ha sido eliminada.`,
+      color: 'success',
+      icon: 'i-lucide-trash'
+    })
+
+    deleteModalOpen.value = false
+    cardToDelete.value = null
+    triggerRefresh()
+    refresh()
+  } catch (err: any) {
+    deleteErrorMessage.value = err?.statusMessage || err?.message || 'No se puede eliminar la tarjeta.'
+    toast.add({
+      title: 'No se puede eliminar',
+      description: deleteErrorMessage.value,
+      color: 'error'
+    })
+  } finally {
+    deletingCard.value = false
+  }
+}
+
+// Mantenimiento de Datos y Demo
 const confirmResetModalOpen = ref(false)
 const resetting = ref(false)
 const resetData = async () => {
@@ -133,6 +298,7 @@ const seedDemo = async () => {
       icon: 'i-lucide-sparkles'
     })
     triggerRefresh()
+    refresh()
   } catch (err: any) {
     toast.add({
       title: 'Error',
@@ -150,27 +316,29 @@ const seedDemo = async () => {
     <!-- Encabezado -->
     <div>
       <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Configuración del Sistema</h1>
-      <p class="text-sm text-muted">Ajusta los parámetros de nómina, presupuesto mensual y tarjetas de crédito</p>
+      <p class="text-sm text-muted">Ajusta los parámetros de nómina, presupuesto mensual y gestiona tus tarjetas de crédito</p>
     </div>
 
-    <form class="space-y-6" @submit.prevent="guardarConfiguracion">
-      <!-- Sección Presupuesto y Nómina -->
-      <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
+    <!-- 1. Sección Presupuesto y Nómina -->
+    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
             <UIcon name="i-lucide-sliders" class="w-5 h-5" />
           </div>
           <div>
             <h3 class="font-bold text-foreground">Reglas de Nómina y Presupuesto</h3>
-            <p class="text-xs text-muted">Afecta el cálculo de períodos y el límite de gasto combinado</p>
+            <p class="text-xs text-muted">Afecta el cálculo de períodos y el límite de gasto mensual combinado</p>
           </div>
         </div>
+      </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+      <form class="space-y-4 pt-2" @submit.prevent="guardarReglasGlobales">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-medium text-muted mb-1">Día Objetivo de Nómina (Default 26)</label>
             <UInput
-              v-model="form.dia_objetivo_nomina"
+              v-model="formGlobal.dia_objetivo_nomina"
               type="number"
               min="1"
               max="31"
@@ -185,7 +353,7 @@ const seedDemo = async () => {
           <div>
             <label class="block text-xs font-medium text-muted mb-1">Límite de Gasto por Período ($ USD)</label>
             <UInput
-              v-model="form.limite_gasto_periodo"
+              v-model="formGlobal.limite_gasto_periodo"
               type="number"
               step="0.01"
               min="0.01"
@@ -194,78 +362,130 @@ const seedDemo = async () => {
               required
             />
             <span class="text-[11px] text-muted mt-1 block">
-              Límite combinado (suma de Tarjeta A + Tarjeta B) por período de nómina.
+              Límite combinado para la suma de todas las tarjetas por período de nómina.
             </span>
           </div>
         </div>
-      </div>
 
-      <!-- Sección Tarjetas -->
-      <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-6">
+        <div class="flex justify-end pt-2">
+          <UButton
+            type="submit"
+            size="md"
+            color="primary"
+            icon="i-lucide-save"
+            label="Guardar Reglas de Presupuesto"
+            :loading="savingGlobal"
+            class="font-semibold shadow-xs"
+          />
+        </div>
+      </form>
+    </div>
+
+    <!-- 2. Sección Tarjetas de Crédito Dinámicas -->
+    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
             <UIcon name="i-lucide-credit-card" class="w-5 h-5" />
           </div>
           <div>
-            <h3 class="font-bold text-foreground">Parámetros de Tarjetas de Crédito</h3>
-            <p class="text-xs text-muted">Días de corte y reglas fijas de ciclo</p>
+            <h3 class="font-bold text-foreground">Tarjetas de Crédito</h3>
+            <p class="text-xs text-muted">Personaliza nombres, días de corte, reglas de pago o agrega nuevas tarjetas</p>
           </div>
         </div>
 
-        <!-- Tarjeta A -->
-        <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-sm text-emerald-400">Tarjeta A</span>
-            <UBadge color="success" variant="subtle" size="xs">Se paga el día 6 (día sig. al corte)</UBadge>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="sm:col-span-2">
-              <label class="block text-xs text-muted mb-1">Nombre Descriptivo</label>
-              <UInput v-model="form.tarjetaA.nombre" class="w-full" />
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1">Día de Corte</label>
-              <UInput v-model="form.tarjetaA.dia_corte" type="number" min="1" max="31" class="w-full" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Tarjeta B -->
-        <div class="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-sm text-indigo-400">Tarjeta B</span>
-            <UBadge color="info" variant="subtle" size="xs">Se paga en el Día de Nómina</UBadge>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="sm:col-span-2">
-              <label class="block text-xs text-muted mb-1">Nombre Descriptivo</label>
-              <UInput v-model="form.tarjetaB.nombre" class="w-full" />
-            </div>
-            <div>
-              <label class="block text-xs text-muted mb-1">Día de Corte</label>
-              <UInput v-model="form.tarjetaB.dia_corte" type="number" min="1" max="31" class="w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Botón de Guardar -->
-      <div class="flex justify-end">
         <UButton
-          type="submit"
-          size="lg"
+          size="sm"
           color="primary"
-          icon="i-lucide-save"
-          label="Guardar Configuración"
-          :loading="saving"
-          class="font-semibold shadow-sm"
+          icon="i-lucide-plus"
+          label="Agregar Tarjeta"
+          class="font-semibold shadow-xs shrink-0 self-start sm:self-auto"
+          @click="openAddCardModal"
         />
       </div>
-    </form>
 
-    <!-- Mantenimiento de Datos y Demo -->
+      <!-- Estado de carga o sin tarjetas -->
+      <div v-if="pending" class="py-10 text-center text-muted text-xs">
+        <UIcon name="i-lucide-loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
+        <span>Cargando tarjetas...</span>
+      </div>
+
+      <div v-else-if="!configData?.tarjetas || configData.tarjetas.length === 0" class="py-10 text-center text-muted space-y-3">
+        <UIcon name="i-lucide-credit-card" class="w-10 h-10 mx-auto opacity-30" />
+        <p class="text-xs">No tienes tarjetas registradas aún.</p>
+        <UButton size="sm" color="primary" icon="i-lucide-plus" label="Agregar Tarjeta" @click="openAddCardModal" />
+      </div>
+
+      <!-- Grid de Tarjetas -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          v-for="t in configData.tarjetas"
+          :key="t.id"
+          class="rounded-xl border p-4.5 space-y-3 relative transition-all"
+          :class="getCardBorderClass(t.color)"
+        >
+          <!-- Encabezado de la Tarjeta -->
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full shrink-0" :class="getCardDotClass(t.color)" />
+              <span class="font-bold text-base text-foreground truncate">{{ t.nombre }}</span>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-pencil"
+                title="Editar tarjeta"
+                @click="openEditCardModal(t)"
+              />
+              <UButton
+                size="xs"
+                color="error"
+                variant="ghost"
+                icon="i-lucide-trash-2"
+                title="Eliminar tarjeta"
+                @click="openDeleteCardModal(t)"
+              />
+            </div>
+          </div>
+
+          <!-- Atributos -->
+          <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-muted/15">
+            <div>
+              <span class="text-muted block text-[11px]">Día de Corte</span>
+              <strong class="text-foreground">Día {{ t.dia_corte }} de cada mes</strong>
+            </div>
+
+            <div>
+              <span class="text-muted block text-[11px]">Vencimiento / Límite</span>
+              <strong class="text-foreground">
+                {{ t.dia_vencimiento_pago ? `Día ${t.dia_vencimiento_pago}` : 'No definido' }}
+              </strong>
+            </div>
+
+            <div class="col-span-2 pt-1">
+              <span class="text-muted block text-[11px]">Regla de Pago</span>
+              <span class="inline-flex items-center gap-1 text-[11px] font-medium text-primary">
+                <UIcon name="i-lucide-calendar-check" class="w-3 h-3" />
+                <template v-if="t.dia_pago_propio_tipo === 'dia_siguiente_corte'">
+                  Se paga al día siguiente del corte (día {{ t.dia_corte + 1 }})
+                </template>
+                <template v-else-if="t.dia_pago_propio_tipo === 'dia_nomina'">
+                  Se paga en el Día de Nómina
+                </template>
+                <template v-else>
+                  Personalizado / Fecha de vencimiento
+                </template>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Mantenimiento de Datos y Demo -->
     <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-muted/20 text-foreground flex items-center justify-center">
@@ -299,13 +519,214 @@ const seedDemo = async () => {
       </div>
     </div>
 
+    <!-- Modal para Agregar Tarjeta -->
+    <UModal v-model:open="addCardModalOpen" title="Agregar Nueva Tarjeta">
+      <template #body>
+        <form class="space-y-4" @submit.prevent="submitAddCard">
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Nombre Descriptivo de la Tarjeta</label>
+            <UInput
+              v-model="newCardForm.nombre"
+              placeholder="Ej. Mastercard - 1706, BBVA Oro, Nu..."
+              class="w-full"
+              required
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-muted mb-1">Día de Corte (1-31)</label>
+              <UInput
+                v-model="newCardForm.dia_corte"
+                type="number"
+                min="1"
+                max="31"
+                class="w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-muted mb-1">Día Vencimiento (opcional)</label>
+              <UInput
+                v-model="newCardForm.dia_vencimiento_pago"
+                type="number"
+                min="1"
+                max="31"
+                placeholder="Ej. 20"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Regla de Pago</label>
+            <select
+              v-model="newCardForm.dia_pago_propio_tipo"
+              class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="dia_siguiente_corte">Pagar el día siguiente al corte (Día corte + 1)</option>
+              <option value="dia_nomina">Pagar en el Día de Nómina</option>
+              <option value="dia_vencimiento">Pagar en fecha de vencimiento</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-muted mb-2">Color Distintivo</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="opt in colorOptions"
+                :key="opt.value"
+                type="button"
+                class="p-2 rounded-lg border text-xs flex items-center gap-2 transition-all"
+                :class="[
+                  newCardForm.color === opt.value
+                    ? 'border-primary bg-primary/10 ring-2 ring-primary/30 font-bold'
+                    : 'border-muted/30 hover:border-muted/60 bg-muted/5'
+                ]"
+                @click="newCardForm.color = opt.value"
+              >
+                <span class="w-3 h-3 rounded-full shrink-0" :class="opt.bgClass" />
+                <span class="truncate">{{ opt.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+            <UButton color="neutral" variant="ghost" label="Cancelar" @click="addCardModalOpen = false" />
+            <UButton type="submit" color="primary" icon="i-lucide-plus" label="Crear Tarjeta" :loading="addingCard" />
+          </div>
+        </form>
+      </template>
+    </UModal>
+
+    <!-- Modal para Editar Tarjeta -->
+    <UModal v-model:open="editCardModalOpen" title="Editar Tarjeta">
+      <template #body>
+        <form class="space-y-4" @submit.prevent="submitEditCard">
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Nombre Descriptivo</label>
+            <UInput
+              v-model="editCardForm.nombre"
+              placeholder="Ej. Mastercard - 1706"
+              class="w-full"
+              required
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-muted mb-1">Día de Corte (1-31)</label>
+              <UInput
+                v-model="editCardForm.dia_corte"
+                type="number"
+                min="1"
+                max="31"
+                class="w-full"
+                required
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-muted mb-1">Día Vencimiento (opcional)</label>
+              <UInput
+                v-model="editCardForm.dia_vencimiento_pago"
+                type="number"
+                min="1"
+                max="31"
+                placeholder="Ej. 20"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-muted mb-1">Regla de Pago</label>
+            <select
+              v-model="editCardForm.dia_pago_propio_tipo"
+              class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="dia_siguiente_corte">Pagar el día siguiente al corte (Día corte + 1)</option>
+              <option value="dia_nomina">Pagar en el Día de Nómina</option>
+              <option value="dia_vencimiento">Pagar en fecha de vencimiento</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-muted mb-2">Color Distintivo</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button
+                v-for="opt in colorOptions"
+                :key="opt.value"
+                type="button"
+                class="p-2 rounded-lg border text-xs flex items-center gap-2 transition-all"
+                :class="[
+                  editCardForm.color === opt.value
+                    ? 'border-primary bg-primary/10 ring-2 ring-primary/30 font-bold'
+                    : 'border-muted/30 hover:border-muted/60 bg-muted/5'
+                ]"
+                @click="editCardForm.color = opt.value"
+              >
+                <span class="w-3 h-3 rounded-full shrink-0" :class="opt.bgClass" />
+                <span class="truncate">{{ opt.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+            <UButton color="neutral" variant="ghost" label="Cancelar" @click="editCardModalOpen = false" />
+            <UButton type="submit" color="primary" icon="i-lucide-save" label="Guardar Cambios" :loading="editingCard" />
+          </div>
+        </form>
+      </template>
+    </UModal>
+
+    <!-- Modal de Confirmación y Advertencia de Eliminación de Tarjeta -->
+    <UModal v-model:open="deleteModalOpen" title="Eliminar Tarjeta">
+      <template #body>
+        <div class="space-y-4">
+          <div v-if="deleteErrorMessage" class="p-3.5 rounded-xl border border-error/30 bg-error/10 text-error space-y-1">
+            <div class="flex items-center gap-2 font-bold text-sm">
+              <UIcon name="i-lucide-alert-triangle" class="w-4 h-4" />
+              <span>Acción no permitida</span>
+            </div>
+            <p class="text-xs leading-relaxed text-foreground">
+              {{ deleteErrorMessage }}
+            </p>
+          </div>
+
+          <p v-else class="text-sm text-muted">
+            ¿Estás seguro de que deseas eliminar la tarjeta <strong>"{{ cardToDelete?.nombre }}"</strong>?
+            Esta acción solo se completará si la tarjeta no posee gastos históricos ni reconciliaciones registradas.
+          </p>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              :label="deleteErrorMessage ? 'Cerrar' : 'Cancelar'"
+              @click="deleteModalOpen = false"
+            />
+            <UButton
+              v-if="!deleteErrorMessage"
+              color="error"
+              icon="i-lucide-trash"
+              label="Sí, eliminar tarjeta"
+              :loading="deletingCard"
+              @click="confirmDeleteCard"
+            />
+          </div>
+        </div>
+      </template>
+    </UModal>
+
     <!-- Modal de Confirmación para Limpiar Datos -->
     <UModal v-model:open="confirmResetModalOpen" title="¿Borrar todos los movimientos?">
       <template #body>
         <div class="space-y-4">
           <p class="text-sm text-muted">
             Esta acción eliminará todos los <strong>gastos</strong>, <strong>ingresos de nómina</strong> y <strong>reconciliaciones</strong> registradas.
-            Tu configuración y parámetros de tarjetas se mantendrán intactos.
+            Tus tarjetas y límites se mantendrán intactos.
           </p>
           <p class="text-xs text-muted">
             Úsalo si deseas limpiar los datos de demostración y empezar a registrar tu información personal real.

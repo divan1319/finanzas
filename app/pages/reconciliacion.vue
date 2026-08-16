@@ -4,7 +4,7 @@ import { formatDateISO } from '#shared/utils/cicloFinanciero'
 const { refreshKey, formatCurrency, formatDate } = useFinanzas()
 const toast = useToast()
 
-const tarjetaCodigo = ref<'A' | 'B'>('A')
+const tarjetaId = ref<number | null>(null)
 const fechaReferencia = ref(formatDateISO(new Date()))
 const totalBancoInput = ref('')
 const notasInput = ref('')
@@ -12,11 +12,18 @@ const saving = ref(false)
 
 const { data: reconciliacionData, pending, refresh } = await useFetch('/api/reconciliaciones', {
   query: computed(() => ({
-    tarjeta_codigo: tarjetaCodigo.value,
+    tarjeta_id: tarjetaId.value || undefined,
     fecha: fechaReferencia.value
   })),
   watch: [refreshKey]
 })
+
+// Auto-seleccionar la primera tarjeta si no hay ninguna seleccionada
+watch(reconciliacionData, (val) => {
+  if (val?.tarjetas?.length && !tarjetaId.value) {
+    tarjetaId.value = val.tarjetas[0].id
+  }
+}, { immediate: true })
 
 const ciclo = computed(() => reconciliacionData.value?.cicloCalculado)
 const totalApp = computed(() => ciclo.value?.totalApp || 0)
@@ -121,36 +128,24 @@ const deleteReconciliacion = async (id: number) => {
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Selector de Tarjeta -->
+            <!-- Selector de Tarjeta Dinámico -->
             <div>
               <label class="block text-xs font-medium text-muted mb-1.5">Tarjeta a Auditar</label>
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                 <button
+                  v-for="t in reconciliacionData?.tarjetas"
+                  :key="t.id"
                   type="button"
-                  class="p-3 rounded-xl border text-center transition-all"
+                  class="p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between"
                   :class="[
-                    tarjetaCodigo === 'A'
-                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 font-bold ring-2 ring-emerald-500/20'
+                    (tarjetaId === t.id || (!tarjetaId && reconciliacionData?.tarjetas?.[0]?.id === t.id))
+                      ? 'border-primary bg-primary/10 text-foreground font-bold ring-2 ring-primary/20'
                       : 'border-muted/30 hover:border-muted/60 text-muted'
                   ]"
-                  @click="tarjetaCodigo = 'A'"
+                  @click="tarjetaId = t.id"
                 >
-                  <span class="block text-sm">Tarjeta A</span>
-                  <span class="text-[10px] text-muted block">Corte 5 / Ciclo 6–5</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="p-3 rounded-xl border text-center transition-all"
-                  :class="[
-                    tarjetaCodigo === 'B'
-                      ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400 font-bold ring-2 ring-indigo-500/20'
-                      : 'border-muted/30 hover:border-muted/60 text-muted'
-                  ]"
-                  @click="tarjetaCodigo = 'B'"
-                >
-                  <span class="block text-sm">Tarjeta B</span>
-                  <span class="text-[10px] text-muted block">Corte 9 / Ciclo 10–9</span>
+                  <span class="block text-sm truncate text-foreground">{{ t.nombre }}</span>
+                  <span class="text-[10px] text-muted block mt-0.5">Corte día {{ t.dia_corte }}</span>
                 </button>
               </div>
             </div>
@@ -168,6 +163,7 @@ const deleteReconciliacion = async (id: number) => {
                 Selecciona cualquier fecha dentro del ciclo a auditar.
               </span>
             </div>
+          </div>
           </div>
 
           <!-- Información del Ciclo Calculado -->
@@ -334,11 +330,11 @@ const deleteReconciliacion = async (id: number) => {
             >
               <td class="py-3.5 px-4 font-bold whitespace-nowrap">
                 <UBadge
-                  :color="rec.tarjeta_codigo === 'A' ? 'success' : 'info'"
+                  :color="rec.tarjeta_color === 'indigo' ? 'info' : (rec.tarjeta_color === 'amber' ? 'warning' : (rec.tarjeta_color === 'rose' || rec.tarjeta_color === 'red' ? 'error' : 'success'))"
                   variant="subtle"
                   size="sm"
                 >
-                  Tarjeta {{ rec.tarjeta_codigo }}
+                  {{ rec.tarjeta_nombre }}
                 </UBadge>
               </td>
               <td class="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">

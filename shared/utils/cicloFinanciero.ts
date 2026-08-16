@@ -10,7 +10,8 @@ export interface PeriodoRango {
 }
 
 export interface CicloFacturacionRango {
-  tarjetaCodigo: 'A' | 'B'
+  tarjetaCodigo?: string
+  diaCorte?: number
   inicio: string // YYYY-MM-DD
   fin: string // YYYY-MM-DD
   inicioDate: Date
@@ -202,11 +203,10 @@ export function periodoActual(
 
 /**
  * 3.5 Ciclo de facturación por tarjeta (para reconciliación, fase 2)
- * - Tarjeta A: del día 6 al día 5 del mes siguiente
- * - Tarjeta B: del día 10 al día 9 del mes siguiente
+ * Calcula el ciclo según el día de corte: inicio día (corte + 1) hasta día (corte).
  */
 export function cicloFacturacion(
-  tarjetaCodigo: 'A' | 'B',
+  tarjetaCodigoOrDiaCorte: 'A' | 'B' | string | number,
   fecha: Date | string = new Date()
 ): CicloFacturacionRango {
   const date = typeof fecha === 'string' ? parseISODate(fecha) : new Date(fecha.getTime())
@@ -214,45 +214,42 @@ export function cicloFacturacion(
   const month = date.getMonth() + 1
   const day = date.getDate()
 
+  let diaCorte = 5
+  let tarjetaCodigo = typeof tarjetaCodigoOrDiaCorte === 'string' ? tarjetaCodigoOrDiaCorte : undefined
+
+  if (typeof tarjetaCodigoOrDiaCorte === 'number') {
+    diaCorte = tarjetaCodigoOrDiaCorte
+  } else if (tarjetaCodigoOrDiaCorte === 'A') {
+    diaCorte = 5
+  } else if (tarjetaCodigoOrDiaCorte === 'B') {
+    diaCorte = 9
+  }
+
+  const diaInicio = diaCorte + 1
   let inicio: Date
   let fin: Date
 
-  if (tarjetaCodigo === 'A') {
-    // Corte 5, inicio 6
-    if (day >= 6) {
-      inicio = new Date(year, month - 1, 6, 12, 0, 0)
-      const nextMonth = month === 12 ? 1 : month + 1
-      const nextYear = month === 12 ? year + 1 : year
-      fin = new Date(nextYear, nextMonth - 1, 5, 12, 0, 0)
-    } else {
-      const prevMonth = month === 1 ? 12 : month - 1
-      const prevYear = month === 1 ? year - 1 : year
-      inicio = new Date(prevYear, prevMonth - 1, 6, 12, 0, 0)
-      fin = new Date(year, month - 1, 5, 12, 0, 0)
-    }
+  if (day >= diaInicio) {
+    inicio = new Date(year, month - 1, diaInicio, 12, 0, 0)
+    const nextMonth = month === 12 ? 1 : month + 1
+    const nextYear = month === 12 ? year + 1 : year
+    fin = new Date(nextYear, nextMonth - 1, diaCorte, 12, 0, 0)
   } else {
-    // Tarjeta B: Corte 9, inicio 10
-    if (day >= 10) {
-      inicio = new Date(year, month - 1, 10, 12, 0, 0)
-      const nextMonth = month === 12 ? 1 : month + 1
-      const nextYear = month === 12 ? year + 1 : year
-      fin = new Date(nextYear, nextMonth - 1, 9, 12, 0, 0)
-    } else {
-      const prevMonth = month === 1 ? 12 : month - 1
-      const prevYear = month === 1 ? year - 1 : year
-      inicio = new Date(prevYear, prevMonth - 1, 10, 12, 0, 0)
-      fin = new Date(year, month - 1, 9, 12, 0, 0)
-    }
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
+    inicio = new Date(prevYear, prevMonth - 1, diaInicio, 12, 0, 0)
+    fin = new Date(year, month - 1, diaCorte, 12, 0, 0)
   }
 
   const MESES = [
     'ene', 'feb', 'mar', 'abr', 'may', 'jun',
     'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
   ]
-  const etiqueta = `Ciclo ${tarjetaCodigo}: ${inicio.getDate()} ${MESES[inicio.getMonth()]} – ${fin.getDate()} ${MESES[fin.getMonth()]} ${fin.getFullYear()}`
+  const etiqueta = `Ciclo: ${inicio.getDate()} ${MESES[inicio.getMonth()]} – ${fin.getDate()} ${MESES[fin.getMonth()]} ${fin.getFullYear()}`
 
   return {
     tarjetaCodigo,
+    diaCorte,
     inicio: formatDateISO(inicio),
     fin: formatDateISO(fin),
     inicioDate: inicio,
