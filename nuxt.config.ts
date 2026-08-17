@@ -37,14 +37,34 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/'
+      navigateFallback: '/',
+      globPatterns: process.env.NODE_ENV === 'production' ? ['**/*.{js,css,html,png,svg,ico,woff2}'] : undefined,
+      runtimeCaching: [
+        {
+          urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+          handler: 'NetworkFirst',
+          method: 'GET',
+          options: {
+            cacheName: 'api-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 7 // 7 días
+            },
+            cacheableResponse: {
+              statuses: [0, 200]
+            },
+            networkTimeoutSeconds: 3
+          }
+        }
+      ]
     },
     client: {
       installPrompt: true
     },
     devOptions: {
-      enabled: false,
-      type: 'module'
+      enabled: true,
+      type: 'module',
+      suppressWarnings: true
     }
   },
 

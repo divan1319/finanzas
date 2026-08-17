@@ -3,8 +3,9 @@ const { openIncomeModal, formatCurrency, formatDate, triggerRefresh } = useFinan
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
-const { data: ingresosData, pending, refresh } = await useFetch('/api/ingresos', {
-  key: 'ingresos'
+const { data: ingresosData, pending, refresh } = useFetch('/api/ingresos', {
+  key: 'ingresos',
+  lazy: true
 })
 
 const deletingId = ref<number | null>(null)

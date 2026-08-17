@@ -21,8 +21,9 @@ useHead({
 const { initOfflineListeners, cacheConfigData, getCachedConfigData } = useOfflineSync()
 
 // Cargar configuración global y tarjetas para los modales con key semántica
-const { data: configData } = await useFetch('/api/configuracion', {
-  key: 'global-config'
+const { data: configData } = useFetch('/api/configuracion', {
+  key: 'global-config',
+  lazy: true
 })
 
 // Respaldar o recuperar catálogo de tarjetas en caché local
