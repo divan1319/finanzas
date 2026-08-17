@@ -38,8 +38,24 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
+      navigateFallbackDenylist: [/^\/api/],
       globPatterns: process.env.NODE_ENV === 'production' ? ['**/*.{js,css,html,png,svg,ico,woff2}'] : undefined,
       runtimeCaching: [
+        {
+          urlPattern: ({ request }) => request.mode === 'navigate',
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'pages-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 días
+            },
+            cacheableResponse: {
+              statuses: [0, 200]
+            },
+            networkTimeoutSeconds: 3
+          }
+        },
         {
           urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
           handler: 'NetworkFirst',
