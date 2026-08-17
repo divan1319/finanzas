@@ -10,9 +10,8 @@ const totalBancoInput = ref('')
 const notasInput = ref('')
 const saving = ref(false)
 
-const { data: reconciliacionData, pending, refresh } = useFetch('/api/reconciliaciones', {
+const { data: reconciliacionData, pending, refresh } = useCachedFetch('/api/reconciliaciones', {
   key: 'reconciliaciones',
-  lazy: true,
   query: computed(() => ({
     tarjeta_id: tarjetaId.value || undefined,
     fecha: fechaReferencia.value

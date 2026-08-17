@@ -3,9 +3,8 @@ const { openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate, t
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
-const { data: dashboard, pending, refresh } = useFetch('/api/dashboard', {
-  key: 'dashboard',
-  lazy: true
+const { data: dashboard, pending, refresh } = useCachedFetch('/api/dashboard', {
+  key: 'dashboard'
 })
 
 const deletingId = ref<number | null>(null)

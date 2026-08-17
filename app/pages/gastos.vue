@@ -27,15 +27,13 @@ watch(filtroPeriodo, (val) => {
 }, { immediate: true })
 
 // Cargar tarjetas
-const { data: configData } = useFetch('/api/configuracion', {
-  key: 'global-config',
-  lazy: true
+const { data: configData } = useCachedFetch('/api/configuracion', {
+  key: 'global-config'
 })
 
 // Cargar gastos con filtros
-const { data: gastosData, pending, refresh } = useFetch('/api/gastos', {
+const { data: gastosData, pending, refresh } = useCachedFetch('/api/gastos', {
   key: 'gastos',
-  lazy: true,
   query: computed(() => ({
     inicio: fechaInicio.value || undefined,
     fin: fechaFin.value || undefined,

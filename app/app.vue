@@ -20,10 +20,9 @@ useHead({
 
 const { initOfflineListeners, cacheConfigData, getCachedConfigData } = useOfflineSync()
 
-// Cargar configuración global y tarjetas para los modales con key semántica
-const { data: configData } = useFetch('/api/configuracion', {
-  key: 'global-config',
-  lazy: true
+// Cargar configuración global y tarjetas para los modales con key semántica y persistencia
+const { data: configData } = useCachedFetch('/api/configuracion', {
+  key: 'global-config'
 })
 
 // Respaldar o recuperar catálogo de tarjetas en caché local
@@ -39,6 +38,8 @@ const effectiveConfig = computed(() => {
 
 onMounted(() => {
   initOfflineListeners()
+  // Precargar en segundo plano las otras vistas para que estén disponibles 100% offline
+  prefetchAppRoutesData()
 })
 </script>
 

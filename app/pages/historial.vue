@@ -3,9 +3,8 @@ const { formatCurrency } = useFinanzas()
 
 const mesesSeleccionados = ref(6)
 
-const { data: historialData, pending, refresh } = useFetch('/api/historial', {
+const { data: historialData, pending, refresh } = useCachedFetch('/api/historial', {
   key: 'historial',
-  lazy: true,
   query: computed(() => ({ meses: mesesSeleccionados.value }))
 })
 </script>

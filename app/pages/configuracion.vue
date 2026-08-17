@@ -2,9 +2,8 @@
 const { triggerRefresh } = useFinanzas()
 const toast = useToast()
 
-const { data: configData, pending, refresh } = useFetch('/api/configuracion', {
-  key: 'global-config',
-  lazy: true
+const { data: configData, pending, refresh } = useCachedFetch('/api/configuracion', {
+  key: 'global-config'
 })
 
 // Formulario de Reglas Globales (Nómina y Límite)
