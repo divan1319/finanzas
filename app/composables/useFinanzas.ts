@@ -11,8 +11,13 @@ export const useFinanzas = () => {
   // Trigger para refrescar datos en páginas
   const refreshKey = useState('finanzas_refresh_key', () => 0)
 
-  const triggerRefresh = () => {
+  const triggerRefresh = async (keys?: string | string[]) => {
     refreshKey.value++
+    if (keys) {
+      await refreshNuxtData(keys)
+    } else {
+      await refreshNuxtData()
+    }
   }
 
   const openNewExpenseModal = (prefill?: Partial<{ fecha: string; tarjeta_id: number; monto: number; descripcion: string; categoria: string }>) => {

@@ -1,15 +1,34 @@
 <script setup lang="ts">
-const { refreshKey, openIncomeModal, formatCurrency, formatDate } = useFinanzas()
+const { openIncomeModal, formatCurrency, formatDate, triggerRefresh } = useFinanzas()
+const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
 const { data: ingresosData, pending, refresh } = await useFetch('/api/ingresos', {
-  watch: [refreshKey]
+  key: 'ingresos'
 })
 
 const deletingId = ref<number | null>(null)
 const deleteIngreso = async (id: number) => {
   if (!confirm('¿Deseas eliminar este registro de ingreso?')) return
   deletingId.value = id
+
+  if (!isOnline.value) {
+    enqueueAction({
+      tipo: 'ingreso_delete',
+      url: `/api/ingresos/${id}`,
+      method: 'DELETE',
+      descripcion: `Eliminar ingreso #${id}`
+    })
+    toast.add({
+      title: 'Eliminación guardada offline',
+      description: 'Se aplicará en el servidor al conectarte.',
+      color: 'warning',
+      icon: 'i-lucide-cloud-off'
+    })
+    deletingId.value = null
+    return
+  }
+
   try {
     await $fetch(`/api/ingresos/${id}`, { method: 'DELETE' })
     toast.add({
@@ -17,13 +36,28 @@ const deleteIngreso = async (id: number) => {
       color: 'success',
       icon: 'i-lucide-trash'
     })
-    refresh()
+    await triggerRefresh(['dashboard', 'ingresos', 'historial'])
   } catch (err: any) {
-    toast.add({
-      title: 'Error al eliminar',
-      description: err?.message,
-      color: 'error'
-    })
+    if (!navigator.onLine || err?.name === 'FetchError') {
+      enqueueAction({
+        tipo: 'ingreso_delete',
+        url: `/api/ingresos/${id}`,
+        method: 'DELETE',
+        descripcion: `Eliminar ingreso #${id}`
+      })
+      toast.add({
+        title: 'Eliminación guardada offline',
+        description: 'Se aplicará en el servidor al conectarte.',
+        color: 'warning',
+        icon: 'i-lucide-cloud-off'
+      })
+    } else {
+      toast.add({
+        title: 'Error al eliminar',
+        description: err?.message,
+        color: 'error'
+      })
+    }
   } finally {
     deletingId.value = null
   }

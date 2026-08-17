@@ -1,11 +1,11 @@
 <script setup lang="ts">
-const { refreshKey, formatCurrency } = useFinanzas()
+const { formatCurrency } = useFinanzas()
 
 const mesesSeleccionados = ref(6)
 
 const { data: historialData, pending, refresh } = await useFetch('/api/historial', {
-  query: computed(() => ({ meses: mesesSeleccionados.value })),
-  watch: [refreshKey]
+  key: 'historial',
+  query: computed(() => ({ meses: mesesSeleccionados.value }))
 })
 </script>
 

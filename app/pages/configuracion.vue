@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const { refreshKey, triggerRefresh } = useFinanzas()
+const { triggerRefresh } = useFinanzas()
 const toast = useToast()
 
 const { data: configData, pending, refresh } = await useFetch('/api/configuracion', {
-  watch: [refreshKey]
+  key: 'global-config'
 })
 
 // Formulario de Reglas Globales (Nómina y Límite)

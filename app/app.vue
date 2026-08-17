@@ -1,6 +1,4 @@
 <script setup lang="ts">
-const { refreshKey } = useFinanzas()
-
 useHead({
   title: 'Control por Tarjeta Activa | Finanzas Personales',
   meta: [
@@ -20,10 +18,26 @@ useHead({
   }
 })
 
-// Cargar configuración global y tarjetas para los modales
+const { initOfflineListeners, cacheConfigData, getCachedConfigData } = useOfflineSync()
+
+// Cargar configuración global y tarjetas para los modales con key semántica
 const { data: configData } = await useFetch('/api/configuracion', {
-  key: 'global-config',
-  watch: [refreshKey]
+  key: 'global-config'
+})
+
+// Respaldar o recuperar catálogo de tarjetas en caché local
+watch(configData, (val) => {
+  if (val) {
+    cacheConfigData(val)
+  }
+}, { immediate: true })
+
+const effectiveConfig = computed(() => {
+  return configData.value || getCachedConfigData()
+})
+
+onMounted(() => {
+  initOfflineListeners()
 })
 </script>
 
@@ -35,8 +49,8 @@ const { data: configData } = await useFetch('/api/configuracion', {
 
     <!-- Modales Globales -->
     <ExpenseModal
-      :tarjetas="configData?.tarjetas"
-      :dia-objetivo-nomina="configData?.configuracion?.dia_objetivo_nomina"
+      :tarjetas="effectiveConfig?.tarjetas"
+      :dia-objetivo-nomina="effectiveConfig?.configuracion?.dia_objetivo_nomina"
     />
     <IncomeModal />
 

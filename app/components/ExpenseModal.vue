@@ -7,6 +7,7 @@ const props = defineProps<{
 }>()
 
 const { expenseModalOpen, expenseModalData, closeExpenseModal, triggerRefresh } = useFinanzas()
+const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
 const categorias = [
@@ -116,18 +117,41 @@ const submitGasto = async () => {
     return
   }
 
+  const payload = {
+    tarjeta_id: form.value.tarjeta_id,
+    fecha: form.value.fecha,
+    monto: montoNum,
+    descripcion: form.value.descripcion,
+    categoria: form.value.categoria
+  }
+
+  // Si estamos sin conexión, guardar directamente en la cola local
+  if (!isOnline.value) {
+    enqueueAction({
+      tipo: isEditing.value ? 'gasto_update' : 'gasto_create',
+      url: isEditing.value ? `/api/gastos/${form.value.id}` : '/api/gastos',
+      method: isEditing.value ? 'PUT' : 'POST',
+      body: payload,
+      descripcion: `Gasto: ${form.value.descripcion} ($${montoNum.toFixed(2)})`
+    })
+
+    toast.add({
+      title: 'Guardado sin conexión',
+      description: 'El gasto se guardó en tu dispositivo. Se sincronizará automáticamente al conectarte.',
+      color: 'warning',
+      icon: 'i-lucide-cloud-off'
+    })
+
+    closeExpenseModal()
+    return
+  }
+
   loading.value = true
   try {
     if (isEditing.value) {
       await $fetch(`/api/gastos/${form.value.id}`, {
         method: 'PUT',
-        body: {
-          tarjeta_id: form.value.tarjeta_id,
-          fecha: form.value.fecha,
-          monto: montoNum,
-          descripcion: form.value.descripcion,
-          categoria: form.value.categoria
-        }
+        body: payload
       })
       toast.add({
         title: 'Gasto actualizado',
@@ -138,13 +162,7 @@ const submitGasto = async () => {
     } else {
       await $fetch('/api/gastos', {
         method: 'POST',
-        body: {
-          tarjeta_id: form.value.tarjeta_id,
-          fecha: form.value.fecha,
-          monto: montoNum,
-          descripcion: form.value.descripcion,
-          categoria: form.value.categoria
-        }
+        body: payload
       })
       toast.add({
         title: 'Gasto registrado',
@@ -154,15 +172,33 @@ const submitGasto = async () => {
       })
     }
 
-    triggerRefresh()
+    await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones'])
     closeExpenseModal()
   } catch (err: any) {
-    toast.add({
-      title: 'Error al guardar',
-      description: err?.statusMessage || err?.message || 'Ocurrió un problema al guardar el gasto.',
-      color: 'error',
-      icon: 'i-lucide-x-circle'
-    })
+    // Si falló por pérdida súbita de conexión, encolar offline
+    if (!navigator.onLine || err?.name === 'FetchError' || err?.message?.includes('fetch')) {
+      enqueueAction({
+        tipo: isEditing.value ? 'gasto_update' : 'gasto_create',
+        url: isEditing.value ? `/api/gastos/${form.value.id}` : '/api/gastos',
+        method: isEditing.value ? 'PUT' : 'POST',
+        body: payload,
+        descripcion: `Gasto: ${form.value.descripcion} ($${montoNum.toFixed(2)})`
+      })
+      toast.add({
+        title: 'Guardado en modo offline',
+        description: 'No se pudo conectar con el servidor. Se guardó localmente para sincronizar.',
+        color: 'warning',
+        icon: 'i-lucide-cloud-off'
+      })
+      closeExpenseModal()
+    } else {
+      toast.add({
+        title: 'Error al guardar',
+        description: err?.statusMessage || err?.message || 'Ocurrió un problema al guardar el gasto.',
+        color: 'error',
+        icon: 'i-lucide-x-circle'
+      })
+    }
   } finally {
     loading.value = false
   }

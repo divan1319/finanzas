@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formatDateISO } from '#shared/utils/cicloFinanciero'
 
-const { refreshKey, formatCurrency, formatDate } = useFinanzas()
+const { formatCurrency, formatDate, triggerRefresh } = useFinanzas()
 const toast = useToast()
 
 const tarjetaId = ref<number | null>(null)
@@ -11,11 +11,11 @@ const notasInput = ref('')
 const saving = ref(false)
 
 const { data: reconciliacionData, pending, refresh } = await useFetch('/api/reconciliaciones', {
+  key: 'reconciliaciones',
   query: computed(() => ({
     tarjeta_id: tarjetaId.value || undefined,
     fecha: fechaReferencia.value
-  })),
-  watch: [refreshKey]
+  }))
 })
 
 // Auto-seleccionar la primera tarjeta si no hay ninguna seleccionada

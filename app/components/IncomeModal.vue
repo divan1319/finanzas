@@ -6,6 +6,7 @@ const props = defineProps<{
 }>()
 
 const { incomeModalOpen, closeIncomeModal, triggerRefresh } = useFinanzas()
+const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
 const form = ref({
@@ -48,15 +49,38 @@ const submitIngreso = async () => {
     return
   }
 
+  const payload = {
+    fecha: form.value.fecha,
+    monto: montoNum,
+    descripcion: form.value.descripcion
+  }
+
+  // Si estamos sin conexión, guardar directamente en la cola local
+  if (!isOnline.value) {
+    enqueueAction({
+      tipo: 'ingreso_create',
+      url: '/api/ingresos',
+      method: 'POST',
+      body: payload,
+      descripcion: `Ingreso: ${form.value.descripcion || 'Nómina'} ($${montoNum.toFixed(2)})`
+    })
+
+    toast.add({
+      title: 'Guardado sin conexión',
+      description: 'El ingreso se guardó localmente. Se sincronizará automáticamente al conectarte.',
+      color: 'warning',
+      icon: 'i-lucide-cloud-off'
+    })
+
+    closeIncomeModal()
+    return
+  }
+
   loading.value = true
   try {
     await $fetch('/api/ingresos', {
       method: 'POST',
-      body: {
-        fecha: form.value.fecha,
-        monto: montoNum,
-        descripcion: form.value.descripcion
-      }
+      body: payload
     })
 
     toast.add({
@@ -66,15 +90,33 @@ const submitIngreso = async () => {
       icon: 'i-lucide-check-circle'
     })
 
-    triggerRefresh()
+    await triggerRefresh(['dashboard', 'ingresos', 'historial'])
     closeIncomeModal()
   } catch (err: any) {
-    toast.add({
-      title: 'Error al registrar ingreso',
-      description: err?.statusMessage || err?.message || 'Ocurrió un problema.',
-      color: 'error',
-      icon: 'i-lucide-x-circle'
-    })
+    // Si falló por pérdida de conexión
+    if (!navigator.onLine || err?.name === 'FetchError' || err?.message?.includes('fetch')) {
+      enqueueAction({
+        tipo: 'ingreso_create',
+        url: '/api/ingresos',
+        method: 'POST',
+        body: payload,
+        descripcion: `Ingreso: ${form.value.descripcion || 'Nómina'} ($${montoNum.toFixed(2)})`
+      })
+      toast.add({
+        title: 'Guardado en modo offline',
+        description: 'No se pudo conectar con el servidor. Se guardó localmente para sincronizar.',
+        color: 'warning',
+        icon: 'i-lucide-cloud-off'
+      })
+      closeIncomeModal()
+    } else {
+      toast.add({
+        title: 'Error al registrar ingreso',
+        description: err?.statusMessage || err?.message || 'Ocurrió un problema.',
+        color: 'error',
+        icon: 'i-lucide-x-circle'
+      })
+    }
   } finally {
     loading.value = false
   }

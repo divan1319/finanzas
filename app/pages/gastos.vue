@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { periodoActual } from '#shared/utils/cicloFinanciero'
 
-const { refreshKey, openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate } = useFinanzas()
+const { openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate, triggerRefresh } = useFinanzas()
+const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
 // Filtros
@@ -26,18 +27,20 @@ watch(filtroPeriodo, (val) => {
 }, { immediate: true })
 
 // Cargar tarjetas
-const { data: configData } = await useFetch('/api/configuracion')
+const { data: configData } = await useFetch('/api/configuracion', {
+  key: 'global-config'
+})
 
 // Cargar gastos con filtros
 const { data: gastosData, pending, refresh } = await useFetch('/api/gastos', {
+  key: 'gastos',
   query: computed(() => ({
     inicio: fechaInicio.value || undefined,
     fin: fechaFin.value || undefined,
     tarjeta_id: tarjetaId.value !== 'todas' ? tarjetaId.value : undefined,
     categoria: categoriaFiltro.value !== 'Todas' ? categoriaFiltro.value : undefined,
     q: search.value || undefined
-  })),
-  watch: [refreshKey]
+  }))
 })
 
 const categorias = [
@@ -58,6 +61,24 @@ const deletingId = ref<number | null>(null)
 const deleteGasto = async (id: number) => {
   if (!confirm('¿Deseas eliminar este gasto?')) return
   deletingId.value = id
+
+  if (!isOnline.value) {
+    enqueueAction({
+      tipo: 'gasto_delete',
+      url: `/api/gastos/${id}`,
+      method: 'DELETE',
+      descripcion: `Eliminar gasto #${id}`
+    })
+    toast.add({
+      title: 'Eliminación guardada offline',
+      description: 'Se aplicará en el servidor al conectarte.',
+      color: 'warning',
+      icon: 'i-lucide-cloud-off'
+    })
+    deletingId.value = null
+    return
+  }
+
   try {
     await $fetch(`/api/gastos/${id}`, { method: 'DELETE' })
     toast.add({
@@ -65,13 +86,28 @@ const deleteGasto = async (id: number) => {
       color: 'success',
       icon: 'i-lucide-trash'
     })
-    refresh()
+    await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones'])
   } catch (err: any) {
-    toast.add({
-      title: 'Error al eliminar',
-      description: err?.message,
-      color: 'error'
-    })
+    if (!navigator.onLine || err?.name === 'FetchError') {
+      enqueueAction({
+        tipo: 'gasto_delete',
+        url: `/api/gastos/${id}`,
+        method: 'DELETE',
+        descripcion: `Eliminar gasto #${id}`
+      })
+      toast.add({
+        title: 'Eliminación guardada offline',
+        description: 'Se aplicará en el servidor al conectarte.',
+        color: 'warning',
+        icon: 'i-lucide-cloud-off'
+      })
+    } else {
+      toast.add({
+        title: 'Error al eliminar',
+        description: err?.message,
+        color: 'error'
+      })
+    }
   } finally {
     deletingId.value = null
   }

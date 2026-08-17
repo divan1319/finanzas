@@ -1,15 +1,34 @@
 <script setup lang="ts">
-const { refreshKey, openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate } = useFinanzas()
+const { openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate, triggerRefresh } = useFinanzas()
+const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
 const { data: dashboard, pending, refresh } = await useFetch('/api/dashboard', {
-  watch: [refreshKey]
+  key: 'dashboard'
 })
 
 const deletingId = ref<number | null>(null)
 const deleteGasto = async (id: number) => {
   if (!confirm('¿Estás seguro de eliminar este gasto?')) return
   deletingId.value = id
+
+  if (!isOnline.value) {
+    enqueueAction({
+      tipo: 'gasto_delete',
+      url: `/api/gastos/${id}`,
+      method: 'DELETE',
+      descripcion: `Eliminar gasto #${id}`
+    })
+    toast.add({
+      title: 'Eliminación guardada offline',
+      description: 'Se aplicará en el servidor al conectarte.',
+      color: 'warning',
+      icon: 'i-lucide-cloud-off'
+    })
+    deletingId.value = null
+    return
+  }
+
   try {
     await $fetch(`/api/gastos/${id}`, { method: 'DELETE' })
     toast.add({
@@ -17,13 +36,28 @@ const deleteGasto = async (id: number) => {
       color: 'success',
       icon: 'i-lucide-trash'
     })
-    refresh()
+    await triggerRefresh(['dashboard', 'gastos'])
   } catch (err: any) {
-    toast.add({
-      title: 'Error',
-      description: err?.message || 'No se pudo eliminar el gasto',
-      color: 'error'
-    })
+    if (!navigator.onLine || err?.name === 'FetchError') {
+      enqueueAction({
+        tipo: 'gasto_delete',
+        url: `/api/gastos/${id}`,
+        method: 'DELETE',
+        descripcion: `Eliminar gasto #${id}`
+      })
+      toast.add({
+        title: 'Eliminación guardada offline',
+        description: 'Se aplicará en el servidor al conectarte.',
+        color: 'warning',
+        icon: 'i-lucide-cloud-off'
+      })
+    } else {
+      toast.add({
+        title: 'Error',
+        description: err?.message || 'No se pudo eliminar el gasto',
+        color: 'error'
+      })
+    }
   } finally {
     deletingId.value = null
   }
