@@ -2,11 +2,12 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
 
 export const tarjetas = sqliteTable('tarjetas', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  codigo: text('codigo').notNull().unique(), // 'A' o 'B'
+  codigo: text('codigo').notNull().unique(), // 'A' o 'B' o código único
   nombre: text('nombre').notNull(),
   dia_corte: integer('dia_corte').notNull(), // 5 o 9
   dia_pago_propio_tipo: text('dia_pago_propio_tipo').notNull(), // 'dia_siguiente_corte' | 'dia_nomina'
   dia_vencimiento_pago: integer('dia_vencimiento_pago'), // Informativo (ej. 30 o 3)
+  es_principal: integer('es_principal', { mode: 'boolean' }).default(false).notNull(),
   color: text('color').default('blue')
 })
 

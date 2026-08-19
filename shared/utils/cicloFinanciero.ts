@@ -19,6 +19,44 @@ export interface CicloFacturacionRango {
   etiqueta: string
 }
 
+export interface TarjetaInfo {
+  id?: number
+  codigo?: string
+  nombre: string
+  dia_corte: number
+  dia_pago_propio_tipo: 'dia_siguiente_corte' | 'dia_nomina' | string
+  dia_vencimiento_pago?: number | null
+  es_principal?: boolean
+  color?: string | null
+}
+
+export interface PeriodoPagoGasto {
+  fechaGasto: string
+  diaCorte: number
+  fechaCorte: string
+  fechaPagoEstimada: string
+  nominaPago: {
+    year: number
+    month: number
+    fechaNomina: string
+  }
+  esDiferido: boolean
+  etiquetaPago: string
+}
+
+export interface TarjetaSugeridaResultado {
+  tarjeta: TarjetaInfo | null
+  codigo: string
+  esPrincipal: boolean
+  motivo: string
+  proximoCambio: {
+    tarjetaNuevaNombre: string
+    tarjetaNuevaCodigo: string
+    fechaCambio: string
+    diasFaltantes: number
+  }
+}
+
 /**
  * Formatea un objeto Date a YYYY-MM-DD usando la zona local o calendario sin desajustes UTC
  */
@@ -38,15 +76,11 @@ export function parseISODate(dateStr: string): Date {
 }
 
 /**
- * 3.2 Cálculo del día de nómina
+ * Cálculo del día de nómina
  * Nómina objetivo: día 26 (por defecto).
  * Si cae sábado (6) -> viernes 25
  * Si cae domingo (0) -> viernes 24
  * Otro caso -> 26
- *
- * @param year Año (ej. 2026)
- * @param month Mes 1-12
- * @param diaObjetivo Día objetivo (default 26)
  */
 export function diaNomina(year: number, month: number, diaObjetivo = 26): number {
   const fecha = new Date(year, month - 1, diaObjetivo, 12, 0, 0)
@@ -69,61 +103,159 @@ export function fechaNomina(year: number, month: number, diaObjetivo = 26): Date
 }
 
 /**
- * 3.3 Tarjeta Activa (la regla central de la app)
- * - Día 6 de cada mes -> se activa Tarjeta A
- * - Día de nómina (24/25/26) -> se activa Tarjeta B
- * Si d >= 6 y d < diaNomina(mes): Tarjeta A
- * En cualquier otro caso: Tarjeta B (cubre d < 6 arrastrado del mes anterior y d >= nómina)
+ * Calcula con precisión a qué ciclo de corte y nómina de pago pertenece un gasto
  */
-export function tarjetaActivaEn(
-  fecha: Date | string,
+export function calcularPeriodoPagoGasto(
+  fechaGastoStr: Date | string,
+  tarjeta: {
+    dia_corte: number
+    dia_pago_propio_tipo?: string
+    es_principal?: boolean
+  },
   diaObjetivoNomina = 26
-): 'A' | 'B' {
-  const date = typeof fecha === 'string' ? parseISODate(fecha) : new Date(fecha.getTime())
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
+): PeriodoPagoGasto {
+  const date = typeof fechaGastoStr === 'string' ? parseISODate(fechaGastoStr) : new Date(fechaGastoStr.getTime())
+  const y = date.getFullYear()
+  const m = date.getMonth() + 1
+  const d = date.getDate()
 
-  const P = diaNomina(year, month, diaObjetivoNomina)
+  const diaCorte = tarjeta.dia_corte || 5
+  const esTipoSiguiente = tarjeta.dia_pago_propio_tipo === 'dia_siguiente_corte' || tarjeta.es_principal
 
-  if (day >= 6 && day < P) {
-    return 'A'
+  let corteYear = y
+  let corteMonth = m
+  let esDiferido = false
+
+  if (d <= diaCorte) {
+    // Pertenece al corte de este mes
+    corteYear = y
+    corteMonth = m
+    esDiferido = false
+  } else {
+    // Pertenece al corte del próximo mes
+    if (m === 12) {
+      corteYear = y + 1
+      corteMonth = 1
+    } else {
+      corteYear = y
+      corteMonth = m + 1
+    }
+    esDiferido = true
   }
-  return 'B'
+
+  const fechaCorteObj = new Date(corteYear, corteMonth - 1, diaCorte, 12, 0, 0)
+  const fechaCorteStr = formatDateISO(fechaCorteObj)
+
+  let fechaPagoObj: Date
+  let nominaYear: number
+  let nominaMonth: number
+
+  const MESES = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ]
+
+  if (esTipoSiguiente) {
+    // Se paga el día siguiente al corte (ej. día 6)
+    fechaPagoObj = new Date(corteYear, corteMonth - 1, diaCorte + 1, 12, 0, 0)
+    // Financiado con la nómina del mes anterior a la fecha de pago
+    if (corteMonth === 1) {
+      nominaYear = corteYear - 1
+      nominaMonth = 12
+    } else {
+      nominaYear = corteYear
+      nominaMonth = corteMonth - 1
+    }
+  } else {
+    // Se paga el día de nómina correspondiente a ese corte
+    nominaYear = corteYear
+    nominaMonth = corteMonth
+    const dNom = diaNomina(nominaYear, nominaMonth, diaObjetivoNomina)
+    fechaPagoObj = new Date(nominaYear, nominaMonth - 1, dNom, 12, 0, 0)
+  }
+
+  const nomDate = fechaNomina(nominaYear, nominaMonth, diaObjetivoNomina)
+  const fechaNominaStr = formatDateISO(nomDate)
+  const fechaPagoStr = formatDateISO(fechaPagoObj)
+
+  const etiquetaPago = esTipoSiguiente
+    ? `Se paga el ${fechaPagoObj.getDate()} de ${MESES[fechaPagoObj.getMonth()]} (con presupuesto de nómina previa)`
+    : `Se paga el ${fechaPagoObj.getDate()} de ${MESES[fechaPagoObj.getMonth()]} (Nómina de ${MESES[nominaMonth - 1]})`
+
+  return {
+    fechaGasto: formatDateISO(date),
+    diaCorte,
+    fechaCorte: fechaCorteStr,
+    fechaPagoEstimada: fechaPagoStr,
+    nominaPago: {
+      year: nominaYear,
+      month: nominaMonth,
+      fechaNomina: fechaNominaStr
+    },
+    esDiferido,
+    etiquetaPago
+  }
 }
 
 /**
- * Calcula la próxima fecha de cambio de tarjeta activa
+ * Determina dinámicamente cuál tarjeta conviene usar hoy según la configuración de tarjetas
  */
-export function proximoCambioTarjeta(
-  fecha: Date | string,
+export function tarjetaSugeridaEn(
+  fechaRef: Date | string,
+  tarjetas: TarjetaInfo[] = [],
   diaObjetivoNomina = 26
-): { tarjetaNueva: 'A' | 'B'; fechaCambio: string; diasFaltantes: number } {
-  const date = typeof fecha === 'string' ? parseISODate(fecha) : new Date(fecha.getTime())
-  const activeNow = tarjetaActivaEn(date, diaObjetivoNomina)
+): TarjetaSugeridaResultado {
+  const date = typeof fechaRef === 'string' ? parseISODate(fechaRef) : new Date(fechaRef.getTime())
   const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
   const P = diaNomina(year, month, diaObjetivoNomina)
 
-  let fechaCambio: Date
-  let tarjetaNueva: 'A' | 'B'
+  // Identificar tarjeta principal y secundarias con fallback a tarjetas A y B por defecto
+  const listaEfectiva: TarjetaInfo[] = tarjetas.length > 0
+    ? tarjetas
+    : [
+        { id: 1, codigo: 'A', nombre: 'Tarjeta A', dia_corte: 5, dia_pago_propio_tipo: 'dia_siguiente_corte', es_principal: true },
+        { id: 2, codigo: 'B', nombre: 'Tarjeta B', dia_corte: 9, dia_pago_propio_tipo: 'dia_nomina', es_principal: false }
+      ]
 
-  if (activeNow === 'A') {
-    // Está en A (entre el 6 y P-1). Cambiará a B el día P de este mes
-    tarjetaNueva = 'B'
+  const principal: TarjetaInfo = listaEfectiva.find(t => t.es_principal) || listaEfectiva.find(t => t.codigo === 'A') || listaEfectiva[0]!
+  const secundarias = listaEfectiva.filter(t => t.id !== principal.id)
+  const secundaria: TarjetaInfo | null = secundarias[0] || null
+
+  const cortePrincipal = principal.dia_corte ?? 5
+  const diaCambioPrincipal = cortePrincipal + 1
+
+  let tarjetaElegida: TarjetaInfo = principal
+  let motivo = ''
+  let tarjetaNuevaNombre = ''
+  let tarjetaNuevaCodigo = ''
+  let fechaCambio: Date
+
+  // Regla de sugerencia:
+  // Si day >= diaCambioPrincipal y day < P -> Sugerir Tarjeta Principal
+  // En cualquier otro caso (day >= P o day < diaCambioPrincipal) -> Sugerir Tarjeta Secundaria (si existe)
+  if (day >= diaCambioPrincipal && day < P) {
+    tarjetaElegida = principal
+    motivo = `Liquidada el día ${diaCambioPrincipal}. Las compras de hoy se pagarán hasta el ${diaCambioPrincipal} del próximo mes.`
+
+    // Cambiará a la secundaria el día de nómina P
+    tarjetaNuevaNombre = secundaria?.nombre || 'Tarjeta Secundaria'
+    tarjetaNuevaCodigo = secundaria?.codigo || 'B'
     fechaCambio = new Date(year, month - 1, P, 12, 0, 0)
   } else {
-    // Está en B
-    tarjetaNueva = 'A'
-    if (day < 6) {
-      // Cambiará a A el día 6 de este mismo mes
-      fechaCambio = new Date(year, month - 1, 6, 12, 0, 0)
+    tarjetaElegida = secundaria || principal
+    motivo = `El corte ya ocurrió. Las compras de hoy se pagarán hasta la nómina del próximo mes.`
+
+    // Cambiará a la principal el día diaCambioPrincipal
+    tarjetaNuevaNombre = principal.nombre || 'Tarjeta Principal'
+    tarjetaNuevaCodigo = principal.codigo || 'A'
+    if (day < diaCambioPrincipal) {
+      fechaCambio = new Date(year, month - 1, diaCambioPrincipal, 12, 0, 0)
     } else {
-      // Cambiará a A el día 6 del próximo mes
       const nextMonth = month === 12 ? 1 : month + 1
       const nextYear = month === 12 ? year + 1 : year
-      fechaCambio = new Date(nextYear, nextMonth - 1, 6, 12, 0, 0)
+      fechaCambio = new Date(nextYear, nextMonth - 1, diaCambioPrincipal, 12, 0, 0)
     }
   }
 
@@ -132,14 +264,47 @@ export function proximoCambioTarjeta(
   const diasFaltantes = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)))
 
   return {
-    tarjetaNueva,
-    fechaCambio: formatDateISO(fechaCambio),
-    diasFaltantes
+    tarjeta: tarjetaElegida,
+    codigo: tarjetaElegida?.codigo || 'A',
+    esPrincipal: Boolean(tarjetaElegida?.es_principal || tarjetaElegida?.id === principal?.id),
+    motivo,
+    proximoCambio: {
+      tarjetaNuevaNombre,
+      tarjetaNuevaCodigo,
+      fechaCambio: formatDateISO(fechaCambio),
+      diasFaltantes
+    }
   }
 }
 
 /**
- * 3.4 Período de gasto (para el límite de ahorro)
+ * Compatibilidad hacia atrás para tarjeta activa
+ */
+export function tarjetaActivaEn(
+  fecha: Date | string,
+  diaObjetivoNomina = 26
+): 'A' | 'B' {
+  const res = tarjetaSugeridaEn(fecha, [], diaObjetivoNomina)
+  return res.codigo === 'B' ? 'B' : 'A'
+}
+
+/**
+ * Compatibilidad hacia atrás para cálculo de próximo cambio
+ */
+export function proximoCambioTarjeta(
+  fecha: Date | string,
+  diaObjetivoNomina = 26
+): { tarjetaNueva: 'A' | 'B'; fechaCambio: string; diasFaltantes: number } {
+  const res = tarjetaSugeridaEn(fecha, [], diaObjetivoNomina)
+  return {
+    tarjetaNueva: res.proximoCambio.tarjetaNuevaCodigo === 'B' ? 'B' : 'A',
+    fechaCambio: res.proximoCambio.fechaCambio,
+    diasFaltantes: res.proximoCambio.diasFaltantes
+  }
+}
+
+/**
+ * Período de gasto (para el límite de ahorro y nómina)
  * Va de un día de nómina al día anterior a la siguiente nómina.
  */
 export function periodoActual(
@@ -157,20 +322,16 @@ export function periodoActual(
   let fin: Date
 
   if (day >= P_mes_actual) {
-    // Inicio: día P de este mes
     inicio = new Date(year, month - 1, P_mes_actual, 12, 0, 0)
-    // Fin: día anterior a la nómina del siguiente mes
     const nextMonth = month === 12 ? 1 : month + 1
     const nextYear = month === 12 ? year + 1 : year
     const P_next = diaNomina(nextYear, nextMonth, diaObjetivoNomina)
     fin = new Date(nextYear, nextMonth - 1, P_next - 1, 12, 0, 0)
   } else {
-    // Inicio: día de nómina del mes anterior
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
     const P_prev = diaNomina(prevYear, prevMonth, diaObjetivoNomina)
     inicio = new Date(prevYear, prevMonth - 1, P_prev, 12, 0, 0)
-    // Fin: día anterior a la nómina de este mes
     fin = new Date(year, month - 1, P_mes_actual - 1, 12, 0, 0)
   }
 
@@ -202,8 +363,7 @@ export function periodoActual(
 }
 
 /**
- * 3.5 Ciclo de facturación por tarjeta (para reconciliación, fase 2)
- * Calcula el ciclo según el día de corte: inicio día (corte + 1) hasta día (corte).
+ * Ciclo de facturación por tarjeta (para reconciliación)
  */
 export function cicloFacturacion(
   tarjetaCodigoOrDiaCorte: 'A' | 'B' | string | number,

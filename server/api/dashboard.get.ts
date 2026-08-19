@@ -1,6 +1,12 @@
 import { db, initDatabase } from '../db'
 import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
-import { periodoActual, tarjetaActivaEn, proximoCambioTarjeta } from '#shared/utils/cicloFinanciero'
+import {
+  periodoActual,
+  tarjetaSugeridaEn,
+  calcularPeriodoPagoGasto,
+  formatDateISO,
+  parseISODate
+} from '#shared/utils/cicloFinanciero'
 import { and, gte, lte, desc } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -19,24 +25,43 @@ export default defineEventHandler(async (event) => {
   const listaTarjetas = await db.select().from(tarjetas)
   const mapTarjetas = new Map(listaTarjetas.map(t => [t.id, t]))
 
-  // 3. Regla central: Tarjeta activa y próximo cambio
-  const codigoTarjetaActiva = tarjetaActivaEn(fechaConsulta, config.dia_objetivo_nomina)
-  const infoTarjetaActiva = listaTarjetas.find(t => t.codigo === codigoTarjetaActiva)
-  const proximoCambio = proximoCambioTarjeta(fechaConsulta, config.dia_objetivo_nomina)
+  // 3. Regla central: Tarjeta activa sugerida y próximo cambio
+  const sugerencia = tarjetaSugeridaEn(fechaConsulta, listaTarjetas, config.dia_objetivo_nomina)
 
   // 4. Período actual de nómina
   const periodo = periodoActual(fechaConsulta, config.dia_objetivo_nomina)
 
-  // 5. Gastos del período actual
-  const gastosPeriodo = await db.select()
+  // 5. Obtener gastos relevantes para el período (buscando un rango amplio de 60 días para evaluar por ciclo)
+  const dateBase = parseISODate(fechaConsulta)
+  const searchStart = new Date(dateBase.getFullYear(), dateBase.getMonth() - 2, 1, 12, 0, 0)
+  const searchEnd = new Date(dateBase.getFullYear(), dateBase.getMonth() + 2, 28, 12, 0, 0)
+
+  const todosGastos = await db.select()
     .from(gastos)
     .where(
       and(
-        gte(gastos.fecha, periodo.inicio),
-        lte(gastos.fecha, periodo.fin)
+        gte(gastos.fecha, formatDateISO(searchStart)),
+        lte(gastos.fecha, formatDateISO(searchEnd))
       )
     )
     .orderBy(desc(gastos.fecha), desc(gastos.id))
+
+  // Filtrar gastos que se pagan con la nómina de este período
+  const gastosPeriodo: Array<typeof gastos.$inferSelect & { periodoPagoInfo?: any }> = []
+  for (const g of todosGastos) {
+    const t = mapTarjetas.get(g.tarjeta_id)
+    if (t) {
+      const pInfo = calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina)
+      if (pInfo.nominaPago.fechaNomina === periodo.inicio) {
+        gastosPeriodo.push({ ...g, periodoPagoInfo: pInfo })
+      }
+    } else {
+      // Fallback si la tarjeta no existe
+      if (g.fecha >= periodo.inicio && g.fecha <= periodo.fin) {
+        gastosPeriodo.push(g)
+      }
+    }
+  }
 
   // Totales y desglose por tarjeta
   let totalGastadoPeriodo = 0
@@ -50,9 +75,9 @@ export default defineEventHandler(async (event) => {
     gastosPorTarjetaMap.set(g.tarjeta_id, (gastosPorTarjetaMap.get(g.tarjeta_id) || 0) + g.monto)
 
     const t = mapTarjetas.get(g.tarjeta_id)
-    if (t?.codigo === 'A') {
+    if (t?.es_principal || t?.codigo === 'A') {
       gastoTarjetaA += g.monto
-    } else if (t?.codigo === 'B') {
+    } else {
       gastoTarjetaB += g.monto
     }
 
@@ -70,6 +95,7 @@ export default defineEventHandler(async (event) => {
       dia_corte: t.dia_corte,
       dia_pago_propio_tipo: t.dia_pago_propio_tipo,
       dia_vencimiento_pago: t.dia_vencimiento_pago,
+      es_principal: Boolean(t.es_principal),
       total,
       porcentaje: totalGastadoPeriodo > 0 ? Math.round((total / totalGastadoPeriodo) * 100) : 0
     }
@@ -93,7 +119,7 @@ export default defineEventHandler(async (event) => {
   const ingresoPrincipal = ingresosPeriodo.length > 0 ? ingresosPeriodo[0] : null
   const totalIngresoPeriodo = ingresosPeriodo.reduce((acc, ing) => acc + ing.monto, 0)
 
-  // 7. Ahorro del período (Sección 3.6)
+  // 7. Ahorro del período
   const tieneIngreso = ingresosPeriodo.length > 0
   const ahorroPeriodo = tieneIngreso ? (totalIngresoPeriodo - totalGastadoPeriodo) : null
   const porcentajeAhorro = tieneIngreso && totalIngresoPeriodo > 0
@@ -115,24 +141,26 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(gastos.fecha), desc(gastos.id))
     .limit(10)
 
-  const ultimosGastos = ultimosGastosRaw.map(g => ({
-    ...g,
-    tarjeta: mapTarjetas.get(g.tarjeta_id)
-  }))
-
-  const tarjetaNuevaInfo = listaTarjetas.find(t => t.codigo === proximoCambio.tarjetaNueva)
+  const ultimosGastos = ultimosGastosRaw.map(g => {
+    const t = mapTarjetas.get(g.tarjeta_id)
+    const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
+    return {
+      ...g,
+      tarjeta: t,
+      periodoPagoInfo: pInfo
+    }
+  })
 
   return {
     fechaConsulta,
     config,
     tarjetas: listaTarjetas,
     tarjetaActiva: {
-      codigo: codigoTarjetaActiva,
-      info: infoTarjetaActiva,
-      proximoCambio: {
-        ...proximoCambio,
-        tarjetaNuevaNombre: tarjetaNuevaInfo?.nombre || `Tarjeta ${proximoCambio.tarjetaNueva}`
-      }
+      codigo: sugerencia.codigo,
+      info: sugerencia.tarjeta,
+      esPrincipal: sugerencia.esPrincipal,
+      motivo: sugerencia.motivo,
+      proximoCambio: sugerencia.proximoCambio
     },
     periodo,
     desgloseTarjetas,

@@ -1,6 +1,12 @@
 import { db, initDatabase } from '../db'
 import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
-import { periodoActual, type PeriodoRango } from '#shared/utils/cicloFinanciero'
+import {
+  periodoActual,
+  calcularPeriodoPagoGasto,
+  formatDateISO,
+  parseISODate,
+  type PeriodoRango
+} from '#shared/utils/cicloFinanciero'
 import { and, gte, lte } from 'drizzle-orm'
 
 export interface ItemHistorialDesgloseTarjeta {
@@ -56,15 +62,34 @@ export default defineEventHandler(async (event) => {
     // Evitar duplicados
     const existe = periodos.find(p => p.inicio === pInfo.inicio)
     if (!existe) {
-      // Obtener gastos de ese período
-      const gastosPeriodo = await db.select()
+      // Obtener gastos alrededor del período (rango amplio de 60 días para agrupar por ciclo de pago)
+      const pInitDate = parseISODate(pInfo.inicio)
+      const pSearchStart = formatDateISO(new Date(pInitDate.getFullYear(), pInitDate.getMonth() - 2, 1, 12, 0, 0))
+      const pSearchEnd = formatDateISO(new Date(pInitDate.getFullYear(), pInitDate.getMonth() + 2, 28, 12, 0, 0))
+
+      const todosGastosPeriodo = await db.select()
         .from(gastos)
         .where(
           and(
-            gte(gastos.fecha, pInfo.inicio),
-            lte(gastos.fecha, pInfo.fin)
+            gte(gastos.fecha, pSearchStart),
+            lte(gastos.fecha, pSearchEnd)
           )
         )
+
+      const gastosPeriodo: Array<typeof gastos.$inferSelect> = []
+      for (const g of todosGastosPeriodo) {
+        const t = mapTarjetas.get(g.tarjeta_id)
+        if (t) {
+          const pCalc = calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina)
+          if (pCalc.nominaPago.fechaNomina === pInfo.inicio) {
+            gastosPeriodo.push(g)
+          }
+        } else {
+          if (g.fecha >= pInfo.inicio && g.fecha <= pInfo.fin) {
+            gastosPeriodo.push(g)
+          }
+        }
+      }
 
       let gastoTarjetaA = 0
       let gastoTarjetaB = 0
@@ -75,8 +100,8 @@ export default defineEventHandler(async (event) => {
         totalGastado += g.monto
         mapGastosTarjeta.set(g.tarjeta_id, (mapGastosTarjeta.get(g.tarjeta_id) || 0) + g.monto)
         const t = mapTarjetas.get(g.tarjeta_id)
-        if (t?.codigo === 'A') gastoTarjetaA += g.monto
-        else if (t?.codigo === 'B') gastoTarjetaB += g.monto
+        if (t?.es_principal || t?.codigo === 'A') gastoTarjetaA += g.monto
+        else gastoTarjetaB += g.monto
       }
 
       const desgloseTarjetas = listaTarjetas.map(t => {
@@ -86,6 +111,7 @@ export default defineEventHandler(async (event) => {
           nombre: t.nombre,
           codigo: t.codigo,
           color: t.color || 'emerald',
+          es_principal: Boolean(t.es_principal),
           total,
           porcentaje: totalGastado > 0 ? Math.round((total / totalGastado) * 100) : 0
         }

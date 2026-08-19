@@ -99,12 +99,14 @@ const newCardForm = ref<{
   dia_corte: number
   dia_vencimiento_pago: number | undefined
   dia_pago_propio_tipo: string
+  es_principal: boolean
   color: string
 }>({
   nombre: '',
   dia_corte: 5,
   dia_vencimiento_pago: undefined,
   dia_pago_propio_tipo: 'dia_siguiente_corte',
+  es_principal: false,
   color: 'emerald'
 })
 
@@ -114,6 +116,7 @@ const openAddCardModal = () => {
     dia_corte: 5,
     dia_vencimiento_pago: undefined,
     dia_pago_propio_tipo: 'dia_siguiente_corte',
+    es_principal: false,
     color: 'emerald'
   }
   addCardModalOpen.value = true
@@ -133,6 +136,7 @@ const submitAddCard = async () => {
         dia_corte: Number(newCardForm.value.dia_corte),
         dia_vencimiento_pago: newCardForm.value.dia_vencimiento_pago ? Number(newCardForm.value.dia_vencimiento_pago) : null,
         dia_pago_propio_tipo: newCardForm.value.dia_pago_propio_tipo,
+        es_principal: newCardForm.value.es_principal,
         color: newCardForm.value.color
       }
     })
@@ -167,6 +171,7 @@ const editCardForm = ref<{
   dia_corte: number
   dia_vencimiento_pago: number | undefined
   dia_pago_propio_tipo: string
+  es_principal: boolean
   color: string
 }>({
   id: 0,
@@ -174,6 +179,7 @@ const editCardForm = ref<{
   dia_corte: 5,
   dia_vencimiento_pago: undefined,
   dia_pago_propio_tipo: 'dia_siguiente_corte',
+  es_principal: false,
   color: 'emerald'
 })
 
@@ -183,7 +189,8 @@ const openEditCardModal = (card: any) => {
     nombre: card.nombre,
     dia_corte: card.dia_corte,
     dia_vencimiento_pago: card.dia_vencimiento_pago || undefined,
-    dia_pago_propio_tipo: card.dia_pago_propio_tipo || 'dia_siguiente_corte',
+    dia_pago_propio_tipo: card.dia_pago_propio_tipo || (card.es_principal ? 'dia_siguiente_corte' : 'dia_nomina'),
+    es_principal: Boolean(card.es_principal),
     color: card.color || 'emerald'
   }
   editCardModalOpen.value = true
@@ -203,6 +210,7 @@ const submitEditCard = async () => {
         dia_corte: Number(editCardForm.value.dia_corte),
         dia_vencimiento_pago: editCardForm.value.dia_vencimiento_pago ? Number(editCardForm.value.dia_vencimiento_pago) : null,
         dia_pago_propio_tipo: editCardForm.value.dia_pago_propio_tipo,
+        es_principal: editCardForm.value.es_principal,
         color: editCardForm.value.color
       }
     })
@@ -225,6 +233,38 @@ const submitEditCard = async () => {
     })
   } finally {
     editingCard.value = false
+  }
+}
+
+// Marcar rápidamente como Tarjeta Principal
+const settingPrincipalId = ref<number | null>(null)
+const marcarComoPrincipal = async (card: any) => {
+  if (card.es_principal) return
+  settingPrincipalId.value = card.id
+  try {
+    await $fetch(`/api/tarjetas/${card.id}`, {
+      method: 'PUT',
+      body: {
+        es_principal: true,
+        dia_pago_propio_tipo: 'dia_siguiente_corte'
+      }
+    })
+    toast.add({
+      title: 'Tarjeta Principal Actualizada',
+      description: `"${card.nombre}" ahora es tu tarjeta principal de uso mensual.`,
+      color: 'success',
+      icon: 'i-lucide-star'
+    })
+    triggerRefresh()
+    refresh()
+  } catch (err: any) {
+    toast.add({
+      title: 'Error',
+      description: err?.message || 'No se pudo cambiar la tarjeta principal.',
+      color: 'error'
+    })
+  } finally {
+    settingPrincipalId.value = null
   }
 }
 
@@ -435,16 +475,38 @@ const seedDemo = async () => {
           v-for="t in configData.tarjetas"
           :key="t.id"
           class="rounded-xl border p-4.5 space-y-3 relative transition-all"
-          :class="getCardBorderClass(t.color)"
+          :class="[
+            getCardBorderClass(t.color),
+            t.es_principal ? 'ring-2 ring-primary/40' : ''
+          ]"
         >
           <!-- Encabezado de la Tarjeta -->
           <div class="flex items-start justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full shrink-0" :class="getCardDotClass(t.color)" />
-              <span class="font-bold text-base text-foreground truncate">{{ t.nombre }}</span>
+            <div class="space-y-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full shrink-0" :class="getCardDotClass(t.color)" />
+                <span class="font-bold text-base text-foreground truncate">{{ t.nombre }}</span>
+              </div>
+              <div v-if="t.es_principal" class="pt-0.5">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30 shadow-xs">
+                  <UIcon name="i-lucide-star" class="w-3 h-3 fill-amber-500" />
+                  Tarjeta Principal (Uso Mensual)
+                </span>
+              </div>
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
+              <UButton
+                v-if="!t.es_principal"
+                size="xs"
+                color="primary"
+                variant="subtle"
+                icon="i-lucide-star"
+                label="Hacer Principal"
+                :loading="settingPrincipalId === t.id"
+                title="Establecer como tarjeta principal de uso mensual"
+                @click="marcarComoPrincipal(t)"
+              />
               <UButton
                 size="xs"
                 color="neutral"
@@ -482,11 +544,11 @@ const seedDemo = async () => {
               <span class="text-muted block text-[11px]">Regla de Pago</span>
               <span class="inline-flex items-center gap-1 text-[11px] font-medium text-primary">
                 <UIcon name="i-lucide-calendar-check" class="w-3 h-3" />
-                <template v-if="t.dia_pago_propio_tipo === 'dia_siguiente_corte'">
+                <template v-if="t.es_principal || t.dia_pago_propio_tipo === 'dia_siguiente_corte'">
                   Se paga al día siguiente del corte (día {{ t.dia_corte + 1 }})
                 </template>
                 <template v-else-if="t.dia_pago_propio_tipo === 'dia_nomina'">
-                  Se paga en el Día de Nómina
+                  Se paga en el Día de Nómina (26)
                 </template>
                 <template v-else>
                   Personalizado / Fecha de vencimiento
@@ -572,6 +634,21 @@ const seedDemo = async () => {
             </div>
           </div>
 
+          <div class="p-3 rounded-xl border border-muted/20 bg-muted/5 space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="newCardForm.es_principal"
+                type="checkbox"
+                class="rounded border-muted/30 text-primary focus:ring-primary w-4 h-4"
+                @change="newCardForm.es_principal ? newCardForm.dia_pago_propio_tipo = 'dia_siguiente_corte' : null"
+              />
+              <span class="text-xs font-bold text-foreground">Marcar como Tarjeta Principal (Uso Mensual)</span>
+            </label>
+            <p class="text-[11px] text-muted leading-relaxed">
+              Define el ciclo mensual estándar. Se pagará al día siguiente de su fecha de corte con el presupuesto reservado.
+            </p>
+          </div>
+
           <div>
             <label class="block text-xs font-medium text-muted mb-1">Regla de Pago</label>
             <select
@@ -579,7 +656,7 @@ const seedDemo = async () => {
               class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="dia_siguiente_corte">Pagar el día siguiente al corte (Día corte + 1)</option>
-              <option value="dia_nomina">Pagar en el Día de Nómina</option>
+              <option value="dia_nomina">Pagar en el Día de Nómina (26)</option>
               <option value="dia_vencimiento">Pagar en fecha de vencimiento</option>
             </select>
           </div>
@@ -653,6 +730,21 @@ const seedDemo = async () => {
             </div>
           </div>
 
+          <div class="p-3 rounded-xl border border-muted/20 bg-muted/5 space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="editCardForm.es_principal"
+                type="checkbox"
+                class="rounded border-muted/30 text-primary focus:ring-primary w-4 h-4"
+                @change="editCardForm.es_principal ? editCardForm.dia_pago_propio_tipo = 'dia_siguiente_corte' : null"
+              />
+              <span class="text-xs font-bold text-foreground">Marcar como Tarjeta Principal (Uso Mensual)</span>
+            </label>
+            <p class="text-[11px] text-muted leading-relaxed">
+              Define el ciclo mensual estándar. Se pagará al día siguiente de su fecha de corte con el presupuesto reservado.
+            </p>
+          </div>
+
           <div>
             <label class="block text-xs font-medium text-muted mb-1">Regla de Pago</label>
             <select
@@ -660,7 +752,7 @@ const seedDemo = async () => {
               class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="dia_siguiente_corte">Pagar el día siguiente al corte (Día corte + 1)</option>
-              <option value="dia_nomina">Pagar en el Día de Nómina</option>
+              <option value="dia_nomina">Pagar en el Día de Nómina (26)</option>
               <option value="dia_vencimiento">Pagar en fecha de vencimiento</option>
             </select>
           </div>

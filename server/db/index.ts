@@ -39,9 +39,17 @@ export async function initDatabase() {
       dia_corte INTEGER NOT NULL,
       dia_pago_propio_tipo TEXT NOT NULL,
       dia_vencimiento_pago INTEGER,
+      es_principal INTEGER NOT NULL DEFAULT 0,
       color TEXT DEFAULT 'blue'
     );
   `)
+
+  // Migración automática para bases de datos existentes sin la columna es_principal
+  try {
+    await client.execute(`ALTER TABLE tarjetas ADD COLUMN es_principal INTEGER NOT NULL DEFAULT 0;`)
+  } catch {
+    // Ignorar si la columna ya existe
+  }
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS configuracion (
@@ -97,6 +105,7 @@ export async function initDatabase() {
         dia_corte: 5,
         dia_pago_propio_tipo: 'dia_siguiente_corte',
         dia_vencimiento_pago: 30,
+        es_principal: true,
         color: 'emerald'
       },
       {
@@ -105,9 +114,22 @@ export async function initDatabase() {
         dia_corte: 9,
         dia_pago_propio_tipo: 'dia_nomina',
         dia_vencimiento_pago: 3,
+        es_principal: false,
         color: 'indigo'
       }
     ])
+  } else {
+    // Si ninguna tarjeta está marcada como principal, marcar la de corte 5 o la primera
+    const hasPrincipal = tarjetasExist.some(t => t.es_principal)
+    if (!hasPrincipal) {
+      const cardToSet = tarjetasExist.find(t => t.dia_corte === 5 || t.codigo === 'A') || tarjetasExist[0]
+      if (cardToSet) {
+        await client.execute({
+          sql: 'UPDATE tarjetas SET es_principal = 1 WHERE id = ?',
+          args: [cardToSet.id]
+        })
+      }
+    }
   }
 
   // Sembrar configuración por defecto si no existe

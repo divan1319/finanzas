@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
     dia_corte: number
     dia_pago_propio_tipo: string
     dia_vencimiento_pago: number | null
+    es_principal: boolean
     color: string
   }> = {}
 
@@ -51,6 +52,14 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 400, statusMessage: 'El día de vencimiento debe estar entre 1 y 31' })
       }
       updateData.dia_vencimiento_pago = venc
+    }
+  }
+
+  if (body.es_principal !== undefined) {
+    updateData.es_principal = Boolean(body.es_principal)
+    if (updateData.es_principal) {
+      // Desmarcar las demás
+      await db.update(tarjetas).set({ es_principal: false })
     }
   }
 

@@ -43,12 +43,20 @@ export default defineEventHandler(async (event) => {
     counter++
   }
 
+  const esPrincipal = Boolean(body.es_principal) || todas.length === 0
+
+  if (esPrincipal) {
+    // Si se marca como principal, desmarcar las demás
+    await db.update(tarjetas).set({ es_principal: false })
+  }
+
   const nuevaTarjeta = {
     codigo: candidatoCodigo,
     nombre: String(body.nombre).trim(),
     dia_corte: diaCorte,
-    dia_pago_propio_tipo: body.dia_pago_propio_tipo || 'dia_siguiente_corte',
+    dia_pago_propio_tipo: body.dia_pago_propio_tipo || (esPrincipal ? 'dia_siguiente_corte' : 'dia_nomina'),
     dia_vencimiento_pago: diaVencimiento,
+    es_principal: esPrincipal,
     color: body.color || 'emerald'
   }
 

@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { tarjetaActivaEn, formatDateISO } from '#shared/utils/cicloFinanciero'
+import { tarjetaSugeridaEn, calcularPeriodoPagoGasto, formatDateISO } from '#shared/utils/cicloFinanciero'
 
 const props = defineProps<{
-  tarjetas?: Array<{ id: number; codigo: string; nombre: string; color?: string | null; dia_corte?: number }>
+  tarjetas?: Array<{
+    id: number
+    codigo: string
+    nombre: string
+    color?: string | null
+    dia_corte: number
+    dia_pago_propio_tipo?: string
+    es_principal?: boolean
+  }>
   diaObjetivoNomina?: number
 }>()
 
@@ -37,15 +45,25 @@ const manualCardOverride = ref(false)
 
 const isEditing = computed(() => !!form.value.id)
 
-// Tarjeta sugerida automáticamente según la fecha
-const tarjetaSugeridaCodigo = computed(() => {
-  if (!form.value.fecha) return 'A'
-  return tarjetaActivaEn(form.value.fecha, props.diaObjetivoNomina || 26)
+// Tarjeta sugerida dinámicamente según la fecha y tarjetas
+const sugerenciaActual = computed(() => {
+  if (!form.value.fecha || !props.tarjetas?.length) return null
+  return tarjetaSugeridaEn(form.value.fecha, props.tarjetas as any, props.diaObjetivoNomina || 26)
 })
 
 const tarjetaSugeridaId = computed(() => {
-  const t = props.tarjetas?.find(c => c.codigo === tarjetaSugeridaCodigo.value)
-  return t?.id
+  return sugerenciaActual.value?.tarjeta?.id || props.tarjetas?.[0]?.id
+})
+
+// Tarjeta actualmente seleccionada
+const tarjetaSeleccionada = computed(() => {
+  return props.tarjetas?.find(t => t.id === form.value.tarjeta_id) || props.tarjetas?.[0]
+})
+
+// Cálculo en tiempo real de cuándo se pagará el gasto
+const infoPagoGasto = computed(() => {
+  if (!form.value.fecha || !tarjetaSeleccionada.value) return null
+  return calcularPeriodoPagoGasto(form.value.fecha, tarjetaSeleccionada.value as any, props.diaObjetivoNomina || 26)
 })
 
 // Auto-seleccionar tarjeta al cambiar la fecha si el usuario no ha forzado un override manual
@@ -252,7 +270,10 @@ const submitGasto = async () => {
               @click="onTarjetaSelectChange(t.id)"
             >
               <div class="flex items-center justify-between w-full">
-                <span class="font-semibold text-sm truncate text-foreground">{{ t.nombre }}</span>
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="font-semibold text-sm truncate text-foreground">{{ t.nombre }}</span>
+                  <UIcon v-if="t.es_principal" name="i-lucide-star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" title="Tarjeta Principal" />
+                </div>
                 <UIcon
                   v-if="form.tarjeta_id === t.id"
                   name="i-lucide-check-circle-2"
@@ -269,6 +290,31 @@ const submitGasto = async () => {
                 </span>
               </div>
             </button>
+          </div>
+
+          <!-- Información en tiempo real de liquidación y nómina de pago -->
+          <div
+            v-if="infoPagoGasto"
+            class="mt-2 p-2.5 rounded-lg border text-xs flex items-center gap-2.5 transition-all shadow-xs"
+            :class="[
+              infoPagoGasto.esDiferido
+                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+            ]"
+          >
+            <UIcon
+              :name="infoPagoGasto.esDiferido ? 'i-lucide-calendar-clock' : 'i-lucide-calendar-check'"
+              class="w-4 h-4 shrink-0"
+            />
+            <div class="leading-tight">
+              <span class="font-semibold text-foreground block">
+                {{ infoPagoGasto.etiquetaPago }}
+              </span>
+              <span class="text-[11px] opacity-80 block mt-0.5">
+                Corte de facturación: {{ infoPagoGasto.fechaCorte }}
+                <template v-if="infoPagoGasto.esDiferido"> (Gasto diferido al próximo mes)</template>
+              </span>
+            </div>
           </div>
         </div>
 

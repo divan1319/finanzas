@@ -6,6 +6,7 @@ export interface DesgloseTarjetaItem {
   color: string
   dia_corte?: number
   dia_pago_propio_tipo?: string
+  es_principal?: boolean
   total: number
   porcentaje: number
 }
@@ -152,6 +153,7 @@ const getCardStyle = (color?: string) => {
           <span class="font-bold text-xs flex items-center gap-1.5 truncate" :class="getCardStyle(t.color).title">
             <span class="w-2 h-2 rounded-full shrink-0" :class="getCardStyle(t.color).dot" />
             <span class="truncate">{{ t.nombre }}</span>
+            <UIcon v-if="t.es_principal" name="i-lucide-star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" title="Tarjeta Principal" />
           </span>
           <span class="text-[11px] text-muted shrink-0">{{ t.porcentaje }}%</span>
         </div>

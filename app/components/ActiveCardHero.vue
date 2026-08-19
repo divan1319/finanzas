@@ -1,8 +1,10 @@
 <script setup lang="ts">
 const props = defineProps<{
-  tarjetaActiva: {
+  tarjetaActiva?: {
     codigo?: string
-    info?: { id: number; nombre: string; dia_corte: number; dia_pago_propio_tipo: string; color?: string | null }
+    esPrincipal?: boolean
+    motivo?: string
+    info?: { id?: number; nombre?: string; dia_corte?: number; dia_pago_propio_tipo?: string; es_principal?: boolean; color?: string | null } | null
     proximoCambio?: { tarjetaNueva?: string; tarjetaNuevaNombre?: string; fechaCambio: string; diasFaltantes: number }
   }
 }>()
@@ -92,6 +94,13 @@ const colorClasses = computed(() => {
             Tarjeta Activa Hoy
           </span>
 
+          <span
+            v-if="props.tarjetaActiva?.info?.es_principal || props.tarjetaActiva?.esPrincipal"
+            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30"
+          >
+            <UIcon name="i-lucide-star" class="w-3 h-3 fill-amber-500" /> Principal
+          </span>
+
           <span v-if="props.tarjetaActiva?.proximoCambio" class="text-xs text-muted">
             Cambia a <strong class="text-foreground">{{ props.tarjetaActiva.proximoCambio.tarjetaNuevaNombre || props.tarjetaActiva.proximoCambio.tarjetaNueva }}</strong> en {{ props.tarjetaActiva.proximoCambio.diasFaltantes }} {{ props.tarjetaActiva.proximoCambio.diasFaltantes === 1 ? 'día' : 'días' }} ({{ formatDate(props.tarjetaActiva.proximoCambio.fechaCambio) }})
           </span>
@@ -108,7 +117,10 @@ const colorClasses = computed(() => {
             </span>
           </h2>
           <p class="text-sm text-muted mt-2">
-            <template v-if="props.tarjetaActiva?.info?.dia_corte">
+            <template v-if="props.tarjetaActiva?.motivo">
+              {{ props.tarjetaActiva.motivo }}
+            </template>
+            <template v-else-if="props.tarjetaActiva?.info?.dia_corte">
               Corte el día {{ props.tarjetaActiva.info.dia_corte }}.
               {{ props.tarjetaActiva.info.dia_pago_propio_tipo === 'dia_siguiente_corte' ? 'Se paga el día posterior al corte.' : 'Se paga con el depósito de nómina.' }}
             </template>
