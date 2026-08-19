@@ -27,7 +27,10 @@ export default defineEventHandler(async (event) => {
 
   const conditions = []
 
-  if (!soloPeriodoActual) {
+  if (soloPeriodoActual) {
+    conditions.push(gte(gastos.fecha, periodo.inicio))
+    conditions.push(lte(gastos.fecha, periodo.fin))
+  } else {
     if (fechaInicio) {
       conditions.push(gte(gastos.fecha, fechaInicio))
     }
@@ -80,23 +83,12 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  const resultsFiltrados = soloPeriodoActual
-    ? results.filter(item => {
-        const tarjetaInfo = {
-          dia_corte: item.tarjeta_dia_corte,
-          dia_pago_propio_tipo: item.tarjeta_dia_pago_propio_tipo,
-          es_principal: Boolean(item.tarjeta_es_principal)
-        }
-        return perteneceAlPeriodoNomina(item.fecha, tarjetaInfo, periodo, config.dia_objetivo_nomina)
-      })
-    : results
-
-  const total = resultsFiltrados.reduce((sum, item) => sum + item.monto, 0)
+  const total = results.reduce((sum, item) => sum + item.monto, 0)
 
   return {
-    gastos: resultsFiltrados,
+    gastos: results,
     total,
-    cantidad: resultsFiltrados.length,
+    cantidad: results.length,
     periodoActual: periodo
   }
 })

@@ -377,20 +377,16 @@ export function periodoActual(
  */
 export function perteneceAlPeriodoNomina(
   fechaGasto: string | Date,
-  tarjeta: {
+  _tarjeta: {
     dia_corte: number
     dia_pago_propio_tipo?: string
     es_principal?: boolean
   } | null | undefined,
   periodo: PeriodoRango,
-  diaObjetivoNomina = 26
+  _diaObjetivoNomina = 26
 ): boolean {
-  if (!tarjeta) {
-    const f = typeof fechaGasto === 'string' ? fechaGasto : formatDateISO(fechaGasto)
-    return f >= periodo.inicio && f <= periodo.fin
-  }
-  const infoPago = calcularPeriodoPagoGasto(fechaGasto, tarjeta, diaObjetivoNomina)
-  return infoPago.nominaPago.year === periodo.nominaYear && infoPago.nominaPago.month === periodo.nominaMonth
+  const f = typeof fechaGasto === 'string' ? fechaGasto : formatDateISO(fechaGasto)
+  return f >= periodo.inicio && f <= periodo.fin
 }
 
 /**

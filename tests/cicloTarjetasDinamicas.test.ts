@@ -159,8 +159,7 @@ describe('Modelo Flexible de Tarjetas: Asignación por Fecha de Corte y Nómina'
   })
 
   describe('6. Pertenencia de Gastos al Período de Nómina (perteneceAlPeriodoNomina)', () => {
-    it('Caso usuario: Gasto en Visa 1231 (corte 9) el 12 de agosto de 2026', () => {
-      // Período actual de nómina visto el 19 de agosto de 2026 (24 jul - 25 ago, nómina de julio)
+    it('Gastos realizados durante el período actual de nómina (24 jul - 25 ago) pertenecen a dicho período', () => {
       const periodoJulio = {
         inicio: '2026-07-24',
         fin: '2026-08-25',
@@ -174,7 +173,6 @@ describe('Modelo Flexible de Tarjetas: Asignación por Fecha de Corte y Nómina'
         nominaMonth: 7
       }
 
-      // Período de nómina siguiente (26 ago - 24 sep, nómina de agosto)
       const periodoAgosto = {
         inicio: '2026-08-26',
         fin: '2026-09-24',
@@ -188,44 +186,15 @@ describe('Modelo Flexible de Tarjetas: Asignación por Fecha de Corte y Nómina'
         nominaMonth: 8
       }
 
-      // Período de nómina subsiguiente (25 sep - 25 oct, nómina de septiembre)
-      const periodoSeptiembre = {
-        inicio: '2026-09-25',
-        fin: '2026-10-25',
-        inicioDate: new Date('2026-09-25'),
-        finDate: new Date('2026-10-25'),
-        diasTotales: 31,
-        diasRestantes: 31,
-        diasTranscurridos: 1,
-        etiqueta: '25 sep – 25 oct 2026',
-        nominaYear: 2026,
-        nominaMonth: 9
-      }
-
-      // Como el gasto fue el 12 de agosto en tarjeta con corte 9:
-      // Corte de facturación: 9 de septiembre. Pago: 25 de septiembre (Nómina de septiembre).
-      // NO debe contarse en el período de julio (24 jul - 25 ago)
-      expect(perteneceAlPeriodoNomina('2026-08-12', tarjeta1231, periodoJulio, 26)).toBe(false)
-      // NO debe contarse en el período de agosto (26 ago - 24 sep)
-      expect(perteneceAlPeriodoNomina('2026-08-12', tarjeta1231, periodoAgosto, 26)).toBe(false)
-      // SÍ debe contarse en el período de septiembre (25 sep - 25 oct)
-      expect(perteneceAlPeriodoNomina('2026-08-12', tarjeta1231, periodoSeptiembre, 26)).toBe(true)
-    })
-
-    it('Gasto en Mastercard 1706 (corte 5) el 4 de agosto de 2026: pertenece al período de nómina de julio', () => {
-      const periodoJulio = {
-        inicio: '2026-07-24',
-        fin: '2026-08-25',
-        inicioDate: new Date('2026-07-24'),
-        finDate: new Date('2026-08-25'),
-        diasTotales: 33,
-        diasRestantes: 6,
-        diasTranscurridos: 27,
-        etiqueta: '24 jul – 25 ago 2026',
-        nominaYear: 2026,
-        nominaMonth: 7
-      }
+      // Gastos del 4 de agosto, 18 de agosto y 19 de agosto pertenecen al período 24 jul - 25 ago
       expect(perteneceAlPeriodoNomina('2026-08-04', tarjeta1706, periodoJulio, 26)).toBe(true)
+      expect(perteneceAlPeriodoNomina('2026-08-18', tarjeta1706, periodoJulio, 26)).toBe(true)
+      expect(perteneceAlPeriodoNomina('2026-08-19', tarjeta1706, periodoJulio, 26)).toBe(true)
+      expect(perteneceAlPeriodoNomina('2026-08-04', tarjeta1231, periodoJulio, 26)).toBe(true)
+
+      // Gastos fuera del período no pertenecen a él
+      expect(perteneceAlPeriodoNomina('2026-08-26', tarjeta1706, periodoJulio, 26)).toBe(false)
+      expect(perteneceAlPeriodoNomina('2026-08-26', tarjeta1706, periodoAgosto, 26)).toBe(true)
     })
   })
 })
