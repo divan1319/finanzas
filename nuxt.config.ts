@@ -37,27 +37,12 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/',
-      navigateFallbackDenylist: [/^\/api/],
+      navigateFallback: null,
+      navigateFallbackDenylist: [/^\/api/, /^\/_auth/],
       globPatterns: process.env.NODE_ENV === 'production' ? ['**/*.{js,css,html,png,svg,ico,woff2}'] : undefined,
       runtimeCaching: [
         {
-          urlPattern: ({ request }) => request.mode === 'navigate',
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'pages-cache',
-            expiration: {
-              maxEntries: 50,
-              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 días
-            },
-            cacheableResponse: {
-              statuses: [0, 200]
-            },
-            networkTimeoutSeconds: 3
-          }
-        },
-        {
-          urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+          urlPattern: ({ url }) => url.pathname.startsWith('/api/') && !url.pathname.includes('auth'),
           handler: 'NetworkFirst',
           method: 'GET',
           options: {
@@ -78,9 +63,7 @@ export default defineNuxtConfig({
       installPrompt: true
     },
     devOptions: {
-      enabled: true,
-      type: 'module',
-      suppressWarnings: true
+      enabled: false
     }
   },
 
@@ -92,6 +75,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     appPassword: process.env.APP_PASSWORD || 'admin123',
+    session: {
+      password: process.env.NUXT_SESSION_PASSWORD || 'finanzas-super-secret-session-key-32-chars-long-abc'
+    },
     tursoDatabaseUrl: process.env.TURSO_DATABASE_URL || '',
     tursoAuthToken: process.env.TURSO_AUTH_TOKEN || ''
   },
