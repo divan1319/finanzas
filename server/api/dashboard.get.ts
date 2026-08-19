@@ -3,7 +3,8 @@ import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
 import {
   periodoActual,
   tarjetaSugeridaEn,
-  calcularPeriodoPagoGasto
+  calcularPeriodoPagoGasto,
+  perteneceAlPeriodoNomina
 } from '#shared/utils/cicloFinanciero'
 import { and, gte, lte, desc } from 'drizzle-orm'
 
@@ -29,22 +30,21 @@ export default defineEventHandler(async (event) => {
   // 4. Período actual de nómina
   const periodo = periodoActual(fechaConsulta, config.dia_objetivo_nomina)
 
-  // 5. Obtener gastos del período actual
+  // 5. Obtener gastos correspondientes al período de pago de esta nómina
   const todosGastos = await db.select()
     .from(gastos)
-    .where(
-      and(
-        gte(gastos.fecha, periodo.inicio),
-        lte(gastos.fecha, periodo.fin)
-      )
-    )
     .orderBy(desc(gastos.fecha), desc(gastos.id))
 
-  const gastosPeriodo = todosGastos.map(g => {
-    const t = mapTarjetas.get(g.tarjeta_id)
-    const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
-    return { ...g, periodoPagoInfo: pInfo }
-  })
+  const gastosPeriodo = todosGastos
+    .filter(g => {
+      const t = mapTarjetas.get(g.tarjeta_id)
+      return perteneceAlPeriodoNomina(g.fecha, t, periodo, config.dia_objetivo_nomina)
+    })
+    .map(g => {
+      const t = mapTarjetas.get(g.tarjeta_id)
+      const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
+      return { ...g, periodoPagoInfo: pInfo }
+    })
 
   // Totales y desglose por tarjeta
   let totalGastadoPeriodo = 0

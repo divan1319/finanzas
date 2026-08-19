@@ -172,8 +172,16 @@ const deleteGasto = async (id: number) => {
                     {{ gasto.tarjeta?.nombre || 'Tarjeta' }}
                   </UBadge>
                 </td>
-                <td class="py-3 px-3 font-medium text-foreground max-w-[200px] truncate">
-                  {{ gasto.descripcion }}
+                <td class="py-3 px-3 font-medium text-foreground max-w-[200px]">
+                  <div class="truncate">{{ gasto.descripcion }}</div>
+                  <div
+                    v-if="gasto.periodoPagoInfo"
+                    class="text-[10px] font-normal flex items-center gap-1 mt-0.5"
+                    :class="gasto.periodoPagoInfo.esDiferido ? 'text-indigo-400 font-medium' : 'text-muted'"
+                  >
+                    <UIcon :name="gasto.periodoPagoInfo.esDiferido ? 'i-lucide-calendar-clock' : 'i-lucide-calendar-check'" class="w-3 h-3 shrink-0" />
+                    <span class="truncate">{{ gasto.periodoPagoInfo.esDiferido ? 'Diferido: se paga ' + formatDate(gasto.periodoPagoInfo.fechaPagoEstimada) : 'Corte actual' }}</span>
+                  </div>
                 </td>
                 <td class="py-3 px-3 text-muted whitespace-nowrap">
                   <span class="inline-flex items-center gap-1 text-xs">

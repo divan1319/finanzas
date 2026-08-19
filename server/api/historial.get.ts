@@ -2,6 +2,7 @@ import { db, initDatabase } from '../db'
 import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
 import {
   periodoActual,
+  perteneceAlPeriodoNomina,
   type PeriodoRango
 } from '#shared/utils/cicloFinanciero'
 import { and, gte, lte, desc } from 'drizzle-orm'
@@ -47,6 +48,11 @@ export default defineEventHandler(async (event) => {
   const fechaBase = (query.fecha as string) || new Date().toISOString().slice(0, 10)
   const [baseY = 2026, baseM = 1, baseD = 1] = fechaBase.split('-').map(Number)
 
+  // Obtener todos los gastos para agrupar por período de nómina
+  const todosLosGastos = await db.select()
+    .from(gastos)
+    .orderBy(desc(gastos.fecha), desc(gastos.id))
+
   // Generar lista de los últimos N períodos
   const periodos: ItemHistorial[] = []
   const hoyDate = new Date(baseY, baseM - 1, baseD, 12, 0, 0)
@@ -59,17 +65,10 @@ export default defineEventHandler(async (event) => {
     // Evitar duplicados
     const existe = periodos.find(p => p.inicio === pInfo.inicio)
     if (!existe) {
-      const todosGastosPeriodo = await db.select()
-        .from(gastos)
-        .where(
-          and(
-            gte(gastos.fecha, pInfo.inicio),
-            lte(gastos.fecha, pInfo.fin)
-          )
-        )
-        .orderBy(desc(gastos.fecha), desc(gastos.id))
-
-      const gastosPeriodo = todosGastosPeriodo
+      const gastosPeriodo = todosLosGastos.filter(g => {
+        const t = mapTarjetas.get(g.tarjeta_id)
+        return perteneceAlPeriodoNomina(g.fecha, t, pInfo, config.dia_objetivo_nomina)
+      })
 
       let gastoTarjetaA = 0
       let gastoTarjetaB = 0

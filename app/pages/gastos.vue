@@ -35,8 +35,9 @@ const { data: configData } = useCachedFetch('/api/configuracion', {
 const { data: gastosData, pending, refresh } = useCachedFetch('/api/gastos', {
   key: 'gastos',
   query: computed(() => ({
-    inicio: fechaInicio.value || undefined,
-    fin: fechaFin.value || undefined,
+    periodo_nomina: filtroPeriodo.value === 'actual' ? 'actual' : undefined,
+    inicio: filtroPeriodo.value === 'custom' ? (fechaInicio.value || undefined) : undefined,
+    fin: filtroPeriodo.value === 'custom' ? (fechaFin.value || undefined) : undefined,
     tarjeta_id: tarjetaId.value !== 'todas' ? tarjetaId.value : undefined,
     categoria: categoriaFiltro.value !== 'Todas' ? categoriaFiltro.value : undefined,
     q: search.value || undefined
@@ -263,8 +264,16 @@ const deleteGasto = async (id: number) => {
                   {{ g.tarjeta_nombre }}
                 </UBadge>
               </td>
-              <td class="py-3.5 px-4 font-medium text-foreground max-w-[260px] truncate">
-                {{ g.descripcion }}
+              <td class="py-3.5 px-4 font-medium text-foreground max-w-[260px]">
+                <div class="truncate">{{ g.descripcion }}</div>
+                <div
+                  v-if="g.periodoPagoInfo"
+                  class="text-[11px] font-normal flex items-center gap-1 mt-0.5"
+                  :class="g.periodoPagoInfo.esDiferido ? 'text-indigo-400 font-medium' : 'text-muted'"
+                >
+                  <UIcon :name="g.periodoPagoInfo.esDiferido ? 'i-lucide-calendar-clock' : 'i-lucide-calendar-check'" class="w-3 h-3 shrink-0" />
+                  <span class="truncate">{{ g.periodoPagoInfo.etiquetaPago }}</span>
+                </div>
               </td>
               <td class="py-3.5 px-4 text-muted whitespace-nowrap">
                 <span class="inline-flex items-center gap-1.5 text-xs bg-muted/10 px-2 py-0.5 rounded-md">

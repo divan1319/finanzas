@@ -1,5 +1,10 @@
 import { db, initDatabase } from '../../db'
-import { gastos, tarjetas } from '../../db/schema'
+import { configuracion, gastos, tarjetas } from '../../db/schema'
+import {
+  periodoActual,
+  calcularPeriodoPagoGasto,
+  perteneceAlPeriodoNomina
+} from '#shared/utils/cicloFinanciero'
 import { and, gte, lte, eq, desc, like } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -10,14 +15,25 @@ export default defineEventHandler(async (event) => {
   const tarjetaId = query.tarjeta_id ? Number(query.tarjeta_id) : undefined
   const categoria = query.categoria as string | undefined
   const search = query.q as string | undefined
+  const soloPeriodoActual = query.periodo_nomina === 'actual'
+
+  const configList = await db.select().from(configuracion)
+  const config = configList[0] || {
+    dia_objetivo_nomina: 26,
+    limite_gasto_periodo: 15000
+  }
+
+  const periodo = periodoActual(new Date(), config.dia_objetivo_nomina)
 
   const conditions = []
 
-  if (fechaInicio) {
-    conditions.push(gte(gastos.fecha, fechaInicio))
-  }
-  if (fechaFin) {
-    conditions.push(lte(gastos.fecha, fechaFin))
+  if (!soloPeriodoActual) {
+    if (fechaInicio) {
+      conditions.push(gte(gastos.fecha, fechaInicio))
+    }
+    if (fechaFin) {
+      conditions.push(lte(gastos.fecha, fechaFin))
+    }
   }
   if (tarjetaId) {
     conditions.push(eq(gastos.tarjeta_id, tarjetaId))
@@ -39,20 +55,48 @@ export default defineEventHandler(async (event) => {
     created_at: gastos.created_at,
     tarjeta_nombre: tarjetas.nombre,
     tarjeta_codigo: tarjetas.codigo,
-    tarjeta_color: tarjetas.color
+    tarjeta_color: tarjetas.color,
+    tarjeta_dia_corte: tarjetas.dia_corte,
+    tarjeta_dia_pago_propio_tipo: tarjetas.dia_pago_propio_tipo,
+    tarjeta_es_principal: tarjetas.es_principal
   })
     .from(gastos)
     .innerJoin(tarjetas, eq(gastos.tarjeta_id, tarjetas.id))
 
-  const results = conditions.length > 0
+  const resultsRaw = conditions.length > 0
     ? await queryBuilder.where(and(...conditions)).orderBy(desc(gastos.fecha), desc(gastos.id))
     : await queryBuilder.orderBy(desc(gastos.fecha), desc(gastos.id))
 
-  const total = results.reduce((sum, item) => sum + item.monto, 0)
+  const results = resultsRaw.map(item => {
+    const tarjetaInfo = {
+      dia_corte: item.tarjeta_dia_corte,
+      dia_pago_propio_tipo: item.tarjeta_dia_pago_propio_tipo,
+      es_principal: Boolean(item.tarjeta_es_principal)
+    }
+    const periodoPagoInfo = calcularPeriodoPagoGasto(item.fecha, tarjetaInfo, config.dia_objetivo_nomina)
+    return {
+      ...item,
+      periodoPagoInfo
+    }
+  })
+
+  const resultsFiltrados = soloPeriodoActual
+    ? results.filter(item => {
+        const tarjetaInfo = {
+          dia_corte: item.tarjeta_dia_corte,
+          dia_pago_propio_tipo: item.tarjeta_dia_pago_propio_tipo,
+          es_principal: Boolean(item.tarjeta_es_principal)
+        }
+        return perteneceAlPeriodoNomina(item.fecha, tarjetaInfo, periodo, config.dia_objetivo_nomina)
+      })
+    : results
+
+  const total = resultsFiltrados.reduce((sum, item) => sum + item.monto, 0)
 
   return {
-    gastos: results,
+    gastos: resultsFiltrados,
     total,
-    cantidad: results.length
+    cantidad: resultsFiltrados.length,
+    periodoActual: periodo
   }
 })
