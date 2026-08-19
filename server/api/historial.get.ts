@@ -2,12 +2,9 @@ import { db, initDatabase } from '../db'
 import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
 import {
   periodoActual,
-  calcularPeriodoPagoGasto,
-  formatDateISO,
-  parseISODate,
   type PeriodoRango
 } from '#shared/utils/cicloFinanciero'
-import { and, gte, lte } from 'drizzle-orm'
+import { and, gte, lte, desc } from 'drizzle-orm'
 
 export interface ItemHistorialDesgloseTarjeta {
   id: number
@@ -62,34 +59,17 @@ export default defineEventHandler(async (event) => {
     // Evitar duplicados
     const existe = periodos.find(p => p.inicio === pInfo.inicio)
     if (!existe) {
-      // Obtener gastos alrededor del período (rango amplio de 60 días para agrupar por ciclo de pago)
-      const pInitDate = parseISODate(pInfo.inicio)
-      const pSearchStart = formatDateISO(new Date(pInitDate.getFullYear(), pInitDate.getMonth() - 2, 1, 12, 0, 0))
-      const pSearchEnd = formatDateISO(new Date(pInitDate.getFullYear(), pInitDate.getMonth() + 2, 28, 12, 0, 0))
-
       const todosGastosPeriodo = await db.select()
         .from(gastos)
         .where(
           and(
-            gte(gastos.fecha, pSearchStart),
-            lte(gastos.fecha, pSearchEnd)
+            gte(gastos.fecha, pInfo.inicio),
+            lte(gastos.fecha, pInfo.fin)
           )
         )
+        .orderBy(desc(gastos.fecha), desc(gastos.id))
 
-      const gastosPeriodo: Array<typeof gastos.$inferSelect> = []
-      for (const g of todosGastosPeriodo) {
-        const t = mapTarjetas.get(g.tarjeta_id)
-        if (t) {
-          const pCalc = calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina)
-          if (pCalc.nominaPago.fechaNomina === pInfo.inicio) {
-            gastosPeriodo.push(g)
-          }
-        } else {
-          if (g.fecha >= pInfo.inicio && g.fecha <= pInfo.fin) {
-            gastosPeriodo.push(g)
-          }
-        }
-      }
+      const gastosPeriodo = todosGastosPeriodo
 
       let gastoTarjetaA = 0
       let gastoTarjetaB = 0

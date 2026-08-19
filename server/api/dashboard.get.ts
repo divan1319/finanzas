@@ -3,9 +3,7 @@ import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
 import {
   periodoActual,
   tarjetaSugeridaEn,
-  calcularPeriodoPagoGasto,
-  formatDateISO,
-  parseISODate
+  calcularPeriodoPagoGasto
 } from '#shared/utils/cicloFinanciero'
 import { and, gte, lte, desc } from 'drizzle-orm'
 
@@ -31,37 +29,22 @@ export default defineEventHandler(async (event) => {
   // 4. Período actual de nómina
   const periodo = periodoActual(fechaConsulta, config.dia_objetivo_nomina)
 
-  // 5. Obtener gastos relevantes para el período (buscando un rango amplio de 60 días para evaluar por ciclo)
-  const dateBase = parseISODate(fechaConsulta)
-  const searchStart = new Date(dateBase.getFullYear(), dateBase.getMonth() - 2, 1, 12, 0, 0)
-  const searchEnd = new Date(dateBase.getFullYear(), dateBase.getMonth() + 2, 28, 12, 0, 0)
-
+  // 5. Obtener gastos del período actual
   const todosGastos = await db.select()
     .from(gastos)
     .where(
       and(
-        gte(gastos.fecha, formatDateISO(searchStart)),
-        lte(gastos.fecha, formatDateISO(searchEnd))
+        gte(gastos.fecha, periodo.inicio),
+        lte(gastos.fecha, periodo.fin)
       )
     )
     .orderBy(desc(gastos.fecha), desc(gastos.id))
 
-  // Filtrar gastos que se pagan con la nómina de este período
-  const gastosPeriodo: Array<typeof gastos.$inferSelect & { periodoPagoInfo?: any }> = []
-  for (const g of todosGastos) {
+  const gastosPeriodo = todosGastos.map(g => {
     const t = mapTarjetas.get(g.tarjeta_id)
-    if (t) {
-      const pInfo = calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina)
-      if (pInfo.nominaPago.fechaNomina === periodo.inicio) {
-        gastosPeriodo.push({ ...g, periodoPagoInfo: pInfo })
-      }
-    } else {
-      // Fallback si la tarjeta no existe
-      if (g.fecha >= periodo.inicio && g.fecha <= periodo.fin) {
-        gastosPeriodo.push(g)
-      }
-    }
-  }
+    const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
+    return { ...g, periodoPagoInfo: pInfo }
+  })
 
   // Totales y desglose por tarjeta
   let totalGastadoPeriodo = 0

@@ -72,10 +72,10 @@ describe('Reglas de Negocio - Ciclo Financiero', () => {
       expect(periodo.fin).toBe('2026-09-24')
     })
 
-    it('Calcula período correcto para 25 sep 2026 (nuevo período: 25 sep al 25 oct)', () => {
-      const periodo = periodoActual('2026-09-25')
-      expect(periodo.inicio).toBe('2026-09-25')
-      expect(periodo.fin).toBe('2026-10-25') // 26 oct es nómina
+    it('Calcula período correcto para 19 ago 2026 (va de 24 jul al 25 ago)', () => {
+      const periodo = periodoActual('2026-08-19')
+      expect(periodo.inicio).toBe('2026-07-24')
+      expect(periodo.fin).toBe('2026-08-25') // 26 ago es nómina
     })
   })
 
