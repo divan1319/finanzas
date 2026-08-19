@@ -1,5 +1,5 @@
 import type { NitroFetchRequest, AvailableRouterMethod } from 'nitropack'
-import type { FetchResult, UseFetchOptions } from 'nuxt/app'
+import type { AsyncData, FetchResult, UseFetchOptions } from 'nuxt/app'
 
 const CACHE_PREFIX = 'finanzas_query_cache_'
 
@@ -46,8 +46,8 @@ export function useCachedFetch<
   DataT = _ResT
 >(
   url: ReqT | (() => ReqT),
-  options: UseFetchOptions<_ResT, DataT, any, any, ReqT, MethodT> = {}
-): ReturnType<typeof useFetch<ResT, ErrorT, ReqT, MethodT, _ResT, DataT>> {
+  options: UseFetchOptions<_ResT, DataT> = {}
+): AsyncData<DataT, ErrorT | undefined> {
   const resolvedKey = typeof options.key === 'string'
     ? options.key
     : (typeof url === 'string' ? url : 'cached_fetch_default')
@@ -55,7 +55,7 @@ export function useCachedFetch<
   // Obtener dato previo en localStorage para entrega inmediata (offline/SWR)
   const initialCache = getLocalCachedData<any>(resolvedKey)
 
-  const fetchOptions: UseFetchOptions<_ResT, DataT, any, any, ReqT, MethodT> = {
+  const fetchOptions: UseFetchOptions<_ResT, DataT> = {
     lazy: true,
     ...options,
     default: () => {
@@ -74,7 +74,7 @@ export function useCachedFetch<
     }
   }
 
-  const result = useFetch(url, fetchOptions as any) as ReturnType<typeof useFetch<ResT, ErrorT, ReqT, MethodT, _ResT, DataT>>
+  const result = useFetch(url, fetchOptions as any) as unknown as AsyncData<DataT, ErrorT | undefined>
 
   // Asegurar que si data.value viene vacío tras montar pero hay caché local en cliente, se aplique
   if (import.meta.client && !result.data.value && initialCache !== null) {
