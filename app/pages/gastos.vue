@@ -58,6 +58,30 @@ const categorias = [
   'Otros'
 ]
 
+// Paginación
+const page = ref(1)
+const itemsPerPage = ref(10)
+
+watch([filtroPeriodo, fechaInicio, fechaFin, tarjetaId, categoriaFiltro, search], () => {
+  page.value = 1
+})
+
+const totalGastos = computed(() => gastosData.value?.gastos?.length || 0)
+
+const totalPaginas = computed(() => Math.ceil(totalGastos.value / itemsPerPage.value) || 1)
+
+watch(totalPaginas, (max) => {
+  if (page.value > max) {
+    page.value = Math.max(1, max)
+  }
+})
+
+const gastosPaginados = computed(() => {
+  const list = gastosData.value?.gastos || []
+  const start = (page.value - 1) * itemsPerPage.value
+  return list.slice(start, start + itemsPerPage.value)
+})
+
 const deletingId = ref<number | null>(null)
 const deleteGasto = async (id: number) => {
   if (!confirm('¿Deseas eliminar este gasto?')) return
@@ -248,7 +272,7 @@ const deleteGasto = async (id: number) => {
           </thead>
           <tbody class="divide-y divide-muted/15">
             <tr
-              v-for="g in gastosData.gastos"
+              v-for="g in gastosPaginados"
               :key="g.id"
               class="hover:bg-muted/5 transition-colors"
             >
@@ -305,6 +329,39 @@ const deleteGasto = async (id: number) => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Footer de Paginación -->
+      <div
+        v-if="totalGastos > 0"
+        class="px-4 py-3 border-t border-muted/15 bg-muted/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted"
+      >
+        <div class="flex items-center gap-2">
+          <span>
+            Mostrando {{ (page - 1) * itemsPerPage + 1 }} – {{ Math.min(page * itemsPerPage, totalGastos) }} de {{ totalGastos }} gastos
+          </span>
+          <select
+            v-model="itemsPerPage"
+            class="rounded border border-muted/30 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            @change="page = 1"
+          >
+            <option :value="5">5 por pág.</option>
+            <option :value="10">10 por pág.</option>
+            <option :value="20">20 por pág.</option>
+            <option :value="50">50 por pág.</option>
+          </select>
+        </div>
+
+        <UPagination
+          v-if="totalGastos > itemsPerPage"
+          v-model:page="page"
+          :total="totalGastos"
+          :items-per-page="itemsPerPage"
+          size="xs"
+          color="neutral"
+          variant="subtle"
+          :sibling-count="1"
+        />
       </div>
     </div>
   </div>

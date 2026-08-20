@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
     .map(g => {
       const t = mapTarjetas.get(g.tarjeta_id)
       const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
-      return { ...g, periodoPagoInfo: pInfo }
+      return { ...g, tarjeta: t, periodoPagoInfo: pInfo }
     })
 
   // Totales y desglose por tarjeta
@@ -118,21 +118,8 @@ export default defineEventHandler(async (event) => {
     }))
     .sort((a, b) => b.total - a.total)
 
-  // 9. Últimos gastos
-  const ultimosGastosRaw = await db.select()
-    .from(gastos)
-    .orderBy(desc(gastos.fecha), desc(gastos.id))
-    .limit(10)
-
-  const ultimosGastos = ultimosGastosRaw.map(g => {
-    const t = mapTarjetas.get(g.tarjeta_id)
-    const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
-    return {
-      ...g,
-      tarjeta: t,
-      periodoPagoInfo: pInfo
-    }
-  })
+  // 9. Últimos gastos (solo del período actual y máximo 5)
+  const ultimosGastos = gastosPeriodo.slice(0, 5)
 
   return {
     fechaConsulta,

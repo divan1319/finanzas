@@ -103,8 +103,8 @@ const deleteGasto = async (id: number) => {
               <UIcon name="i-lucide-receipt" class="w-5 h-5" />
             </div>
             <div>
-              <h3 class="font-bold text-foreground">Últimos Gastos Registrados</h3>
-              <p class="text-xs text-muted">Gastos recientes en cualquiera de las dos tarjetas</p>
+              <h3 class="font-bold text-foreground">Últimos Gastos del Período</h3>
+              <p class="text-xs text-muted">Últimos 5 gastos correspondientes a este mes / ciclo</p>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ const deleteGasto = async (id: number) => {
         <!-- Tabla / Lista de Gastos -->
         <div v-if="dashboard.ultimosGastos.length === 0" class="text-center py-10 text-muted text-sm space-y-3">
           <UIcon name="i-lucide-inbox" class="w-10 h-10 mx-auto opacity-40" />
-          <p>Aún no hay gastos registrados en el sistema.</p>
+          <p>No hay gastos registrados en este período actual.</p>
           <UButton
             size="sm"
             color="primary"
