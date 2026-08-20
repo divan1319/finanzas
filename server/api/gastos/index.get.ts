@@ -80,6 +80,9 @@ export default defineEventHandler(async (event) => {
     }
   })
 
+  const page = Math.max(1, Number(query.page || 1))
+  const limit = query.limit !== undefined ? Math.max(1, Number(query.limit)) : undefined
+
   const resultsFiltrados = soloPeriodoActual
     ? results.filter(item => {
         const tarjetaInfo = {
@@ -92,11 +95,19 @@ export default defineEventHandler(async (event) => {
     : results
 
   const total = resultsFiltrados.reduce((sum, item) => sum + item.monto, 0)
+  const totalItems = resultsFiltrados.length
+
+  const paginatedResults = limit !== undefined
+    ? resultsFiltrados.slice((page - 1) * limit, page * limit)
+    : resultsFiltrados
 
   return {
-    gastos: resultsFiltrados,
+    gastos: paginatedResults,
     total,
-    cantidad: resultsFiltrados.length,
+    cantidad: totalItems,
+    page,
+    limit: limit || totalItems,
+    totalPages: limit ? Math.ceil(totalItems / limit) || 1 : 1,
     periodoActual: periodo
   }
 })

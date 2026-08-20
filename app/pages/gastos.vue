@@ -31,10 +31,21 @@ const { data: configData } = useCachedFetch('/api/configuracion', {
   key: 'global-config'
 })
 
-// Cargar gastos con filtros
+// Paginación
+const page = ref(1)
+const itemsPerPage = ref(10)
+
+// Reiniciar página a 1 cuando cambian los filtros
+watch([filtroPeriodo, fechaInicio, fechaFin, tarjetaId, categoriaFiltro, search], () => {
+  page.value = 1
+})
+
+// Cargar gastos con filtros y paginación en servidor
 const { data: gastosData, pending, refresh } = useCachedFetch('/api/gastos', {
-  key: 'gastos',
+  key: computed(() => `gastos-${filtroPeriodo.value}-${tarjetaId.value}-${categoriaFiltro.value}-${page.value}-${itemsPerPage.value}-${search.value}-${fechaInicio.value}-${fechaFin.value}`),
   query: computed(() => ({
+    page: page.value,
+    limit: itemsPerPage.value,
     periodo_nomina: filtroPeriodo.value === 'actual' ? 'actual' : undefined,
     inicio: filtroPeriodo.value === 'custom' ? (fechaInicio.value || undefined) : undefined,
     fin: filtroPeriodo.value === 'custom' ? (fechaFin.value || undefined) : undefined,
@@ -58,28 +69,13 @@ const categorias = [
   'Otros'
 ]
 
-// Paginación
-const page = ref(1)
-const itemsPerPage = ref(10)
-
-watch([filtroPeriodo, fechaInicio, fechaFin, tarjetaId, categoriaFiltro, search], () => {
-  page.value = 1
-})
-
-const totalGastos = computed(() => gastosData.value?.gastos?.length || 0)
-
-const totalPaginas = computed(() => Math.ceil(totalGastos.value / itemsPerPage.value) || 1)
+const totalGastos = computed(() => gastosData.value?.cantidad || 0)
+const totalPaginas = computed(() => gastosData.value?.totalPages || 1)
 
 watch(totalPaginas, (max) => {
   if (page.value > max) {
     page.value = Math.max(1, max)
   }
-})
-
-const gastosPaginados = computed(() => {
-  const list = gastosData.value?.gastos || []
-  const start = (page.value - 1) * itemsPerPage.value
-  return list.slice(start, start + itemsPerPage.value)
 })
 
 const deletingId = ref<number | null>(null)
@@ -272,7 +268,7 @@ const deleteGasto = async (id: number) => {
           </thead>
           <tbody class="divide-y divide-muted/15">
             <tr
-              v-for="g in gastosPaginados"
+              v-for="g in gastosData.gastos"
               :key="g.id"
               class="hover:bg-muted/5 transition-colors"
             >

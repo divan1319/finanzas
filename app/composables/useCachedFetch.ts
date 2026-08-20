@@ -48,9 +48,13 @@ export function useCachedFetch<
   url: ReqT | (() => ReqT),
   options: UseFetchOptions<_ResT, DataT> = {}
 ): AsyncData<DataT, ErrorT | undefined> {
-  const resolvedKey = typeof options.key === 'string'
-    ? options.key
-    : (typeof url === 'string' ? url : 'cached_fetch_default')
+  const getResolvedKey = () => {
+    if (isRef(options.key)) return (options.key as any).value
+    if (typeof options.key === 'string') return options.key
+    return typeof url === 'string' ? url : 'cached_fetch_default'
+  }
+
+  const resolvedKey = getResolvedKey()
 
   // Obtener dato previo en localStorage para entrega inmediata (offline/SWR)
   const initialCache = getLocalCachedData<any>(resolvedKey)
@@ -66,7 +70,7 @@ export function useCachedFetch<
     },
     onResponse(context) {
       if (context.response.ok && context.response._data) {
-        setLocalCachedData(resolvedKey, context.response._data)
+        setLocalCachedData(getResolvedKey(), context.response._data)
       }
       if (typeof options.onResponse === 'function') {
         (options.onResponse as any)(context)
