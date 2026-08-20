@@ -66,7 +66,8 @@ export default defineEventHandler(async (event) => {
     const existe = periodos.find(p => p.inicio === pInfo.inicio)
     if (!existe) {
       const gastosPeriodo = todosLosGastos.filter(g => {
-        return g.fecha >= pInfo.inicio && g.fecha <= pInfo.fin
+        const t = mapTarjetas.get(g.tarjeta_id)
+        return perteneceAlPeriodoNomina(g.fecha, t, pInfo, config.dia_objetivo_nomina)
       })
 
       let gastoTarjetaA = 0

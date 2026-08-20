@@ -3,6 +3,7 @@ import {
   calcularPeriodoPagoGasto,
   tarjetaSugeridaEn,
   perteneceAlPeriodoNomina,
+  periodoActual,
   type TarjetaInfo
 } from '../shared/utils/cicloFinanciero'
 
@@ -159,42 +160,35 @@ describe('Modelo Flexible de Tarjetas: Asignación por Fecha de Corte y Nómina'
   })
 
   describe('6. Pertenencia de Gastos al Período de Nómina (perteneceAlPeriodoNomina)', () => {
-    it('Gastos realizados durante el período actual de nómina (24 jul - 25 ago) pertenecen a dicho período', () => {
-      const periodoJulio = {
-        inicio: '2026-07-24',
-        fin: '2026-08-25',
-        inicioDate: new Date('2026-07-24'),
-        finDate: new Date('2026-08-25'),
-        diasTotales: 33,
-        diasRestantes: 6,
-        diasTranscurridos: 27,
-        etiqueta: '24 jul – 25 ago 2026',
-        nominaYear: 2026,
-        nominaMonth: 7
-      }
+    // Período activo el 19 de agosto de 2026 (va de 24 jul a 25 ago, liquidado con nómina de agosto)
+    const periodoActualAgo = periodoActual('2026-08-19', 26) // nominaYear: 2026, nominaMonth: 8
+    // Período siguiente (va de 26 ago a 24 sep, liquidado con nómina de septiembre)
+    const periodoSiguienteSep = periodoActual('2026-08-28', 26) // nominaYear: 2026, nominaMonth: 9
 
-      const periodoAgosto = {
-        inicio: '2026-08-26',
-        fin: '2026-09-24',
-        inicioDate: new Date('2026-08-26'),
-        finDate: new Date('2026-09-24'),
-        diasTotales: 30,
-        diasRestantes: 30,
-        diasTranscurridos: 1,
-        etiqueta: '26 ago – 24 sep 2026',
-        nominaYear: 2026,
-        nominaMonth: 8
-      }
+    it('Caso usuario: Gasto en Visa 1231 (corte 9) el 10 de agosto de 2026', () => {
+      // Como el gasto fue el 10 de agosto en tarjeta con corte 9:
+      // Corte de facturación: 9 de septiembre. Pago: 25 de septiembre (Nómina de septiembre).
+      // NO debe contarse en el período actual (liquidado en nómina de agosto)
+      expect(perteneceAlPeriodoNomina('2026-08-10', tarjeta1231, periodoActualAgo, 26)).toBe(false)
+      // SÍ debe contarse en el período siguiente (liquidado en nómina de septiembre)
+      expect(perteneceAlPeriodoNomina('2026-08-10', tarjeta1231, periodoSiguienteSep, 26)).toBe(true)
+    })
 
-      // Gastos del 4 de agosto, 18 de agosto y 19 de agosto pertenecen al período 24 jul - 25 ago
-      expect(perteneceAlPeriodoNomina('2026-08-04', tarjeta1706, periodoJulio, 26)).toBe(true)
-      expect(perteneceAlPeriodoNomina('2026-08-18', tarjeta1706, periodoJulio, 26)).toBe(true)
-      expect(perteneceAlPeriodoNomina('2026-08-19', tarjeta1706, periodoJulio, 26)).toBe(true)
-      expect(perteneceAlPeriodoNomina('2026-08-04', tarjeta1231, periodoJulio, 26)).toBe(true)
+    it('Gasto en Visa 1231 (corte 9) el 4 de agosto de 2026: pertenece al período actual', () => {
+      // Corte 9 de agosto -> Se paga el 26 de agosto (Nómina de agosto)
+      expect(perteneceAlPeriodoNomina('2026-08-04', tarjeta1231, periodoActualAgo, 26)).toBe(true)
+      expect(perteneceAlPeriodoNomina('2026-08-04', tarjeta1231, periodoSiguienteSep, 26)).toBe(false)
+    })
 
-      // Gastos fuera del período no pertenecen a él
-      expect(perteneceAlPeriodoNomina('2026-08-26', tarjeta1706, periodoJulio, 26)).toBe(false)
-      expect(perteneceAlPeriodoNomina('2026-08-26', tarjeta1706, periodoAgosto, 26)).toBe(true)
+    it('Gasto en Mastercard 1706 (corte 5) el 18 de agosto de 2026: pertenece al período actual', () => {
+      // Corte 5 de septiembre -> Se paga el 6 de septiembre con nómina de agosto
+      expect(perteneceAlPeriodoNomina('2026-08-18', tarjeta1706, periodoActualAgo, 26)).toBe(true)
+      expect(perteneceAlPeriodoNomina('2026-08-18', tarjeta1706, periodoSiguienteSep, 26)).toBe(false)
+    })
+
+    it('Gasto en Mastercard 1706 (corte 5) el 19 de agosto de 2026: pertenece al período actual', () => {
+      expect(perteneceAlPeriodoNomina('2026-08-19', tarjeta1706, periodoActualAgo, 26)).toBe(true)
+      expect(perteneceAlPeriodoNomina('2026-08-19', tarjeta1706, periodoSiguienteSep, 26)).toBe(false)
     })
   })
 })

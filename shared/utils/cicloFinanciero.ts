@@ -331,16 +331,16 @@ export function periodoActual(
     const nextYear = month === 12 ? year + 1 : year
     const P_next = diaNomina(nextYear, nextMonth, diaObjetivoNomina)
     fin = new Date(nextYear, nextMonth - 1, P_next - 1, 12, 0, 0)
-    nominaYear = year
-    nominaMonth = month
+    nominaYear = nextYear
+    nominaMonth = nextMonth
   } else {
     const prevMonth = month === 1 ? 12 : month - 1
     const prevYear = month === 1 ? year - 1 : year
     const P_prev = diaNomina(prevYear, prevMonth, diaObjetivoNomina)
     inicio = new Date(prevYear, prevMonth - 1, P_prev, 12, 0, 0)
     fin = new Date(year, month - 1, P_mes_actual - 1, 12, 0, 0)
-    nominaYear = prevYear
-    nominaMonth = prevMonth
+    nominaYear = year
+    nominaMonth = month
   }
 
   const hoyMid = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0)
@@ -377,16 +377,20 @@ export function periodoActual(
  */
 export function perteneceAlPeriodoNomina(
   fechaGasto: string | Date,
-  _tarjeta: {
+  tarjeta: {
     dia_corte: number
     dia_pago_propio_tipo?: string
     es_principal?: boolean
   } | null | undefined,
   periodo: PeriodoRango,
-  _diaObjetivoNomina = 26
+  diaObjetivoNomina = 26
 ): boolean {
-  const f = typeof fechaGasto === 'string' ? fechaGasto : formatDateISO(fechaGasto)
-  return f >= periodo.inicio && f <= periodo.fin
+  if (!tarjeta) {
+    const f = typeof fechaGasto === 'string' ? fechaGasto : formatDateISO(fechaGasto)
+    return f >= periodo.inicio && f <= periodo.fin
+  }
+  const infoPago = calcularPeriodoPagoGasto(fechaGasto, tarjeta, diaObjetivoNomina)
+  return infoPago.nominaPago.year === periodo.nominaYear && infoPago.nominaPago.month === periodo.nominaMonth
 }
 
 /**
