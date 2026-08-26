@@ -17,7 +17,7 @@ const props = defineProps<{
   }
 }>()
 
-const { formatCurrency } = useFinanzas()
+const { formatCurrency, openBudgetModal } = useFinanzas()
 
 const progressColor = computed(() => {
   if (props.resumenGasto.excedido || props.resumenGasto.porcentajeLimite >= 100) return 'error'
@@ -29,6 +29,17 @@ const presupuestoDiarioRestante = computed(() => {
   if (!props.periodo?.diasRestantes || props.periodo.diasRestantes <= 0) return 0
   return Math.max(0, props.resumenGasto.restante / props.periodo.diasRestantes)
 })
+
+const handleEditBudget = () => {
+  if (!props.periodo) return
+  openBudgetModal({
+    inicio: props.periodo.inicio,
+    fin: props.periodo.fin,
+    etiqueta: props.periodo.etiqueta,
+    limite: props.resumenGasto.limite,
+    tienePresupuestoPersonalizado: (props.resumenGasto as any).tienePresupuestoPersonalizado
+  })
+}
 </script>
 
 <template>
@@ -64,10 +75,16 @@ const presupuestoDiarioRestante = computed(() => {
           <span class="text-xs text-muted ml-1">gastados</span>
         </div>
         <div class="text-right">
-          <span class="text-xs text-muted block">Límite mensual</span>
-          <span class="text-sm font-semibold text-foreground">
-            {{ formatCurrency(props.resumenGasto.limite) }}
-          </span>
+          <span class="text-xs text-muted block">Presupuesto del ciclo</span>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 text-sm font-bold text-foreground hover:text-primary transition-colors cursor-pointer group"
+            title="Clic para editar el presupuesto de este período"
+            @click="handleEditBudget"
+          >
+            <span>{{ formatCurrency(props.resumenGasto.limite) }}</span>
+            <UIcon name="i-lucide-pencil" class="w-3.5 h-3.5 text-muted group-hover:text-primary transition-colors" />
+          </button>
         </div>
       </div>
 

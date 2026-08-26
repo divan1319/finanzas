@@ -1,12 +1,12 @@
 import { db, initDatabase } from '../db'
-import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
+import { configuracion, gastos, ingresos, tarjetas, presupuestosPeriodo } from '../db/schema'
 import {
   periodoActual,
   tarjetaSugeridaEn,
   calcularPeriodoPagoGasto,
   perteneceAlPeriodoNomina
 } from '#shared/utils/cicloFinanciero'
-import { and, gte, lte, desc } from 'drizzle-orm'
+import { and, gte, lte, desc, eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   await initDatabase()
@@ -30,7 +30,17 @@ export default defineEventHandler(async (event) => {
   // 4. Período actual de nómina
   const periodo = periodoActual(fechaConsulta, config.dia_objetivo_nomina)
 
-  // 5. Obtener gastos correspondientes al período de nómina actual
+  // 5. Obtener presupuesto específico del período actual (o fallback al global)
+  const presPeriodoList = await db.select()
+    .from(presupuestosPeriodo)
+    .where(eq(presupuestosPeriodo.periodo_inicio, periodo.inicio))
+
+  const tienePresupuestoPersonalizado = presPeriodoList.length > 0
+  const limite = tienePresupuestoPersonalizado
+    ? presPeriodoList[0]!.limite
+    : config.limite_gasto_periodo
+
+  // 6. Obtener gastos correspondientes al período de nómina actual
   const todosGastos = await db.select()
     .from(gastos)
     .orderBy(desc(gastos.fecha), desc(gastos.id))
@@ -84,12 +94,11 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  const limite = config.limite_gasto_periodo
   const porcentajeLimite = limite > 0 ? Math.round((totalGastadoPeriodo / limite) * 100) : 0
   const restanteLimite = Math.max(0, limite - totalGastadoPeriodo)
   const excedido = totalGastadoPeriodo > limite
 
-  // 6. Ingreso del período actual
+  // 7. Ingreso del período actual
   const ingresosPeriodo = await db.select()
     .from(ingresos)
     .where(
@@ -102,14 +111,14 @@ export default defineEventHandler(async (event) => {
   const ingresoPrincipal = ingresosPeriodo.length > 0 ? ingresosPeriodo[0] : null
   const totalIngresoPeriodo = ingresosPeriodo.reduce((acc, ing) => acc + ing.monto, 0)
 
-  // 7. Ahorro del período
+  // 8. Ahorro del período
   const tieneIngreso = ingresosPeriodo.length > 0
   const ahorroPeriodo = tieneIngreso ? (totalIngresoPeriodo - totalGastadoPeriodo) : null
   const porcentajeAhorro = tieneIngreso && totalIngresoPeriodo > 0
     ? Math.round((ahorroPeriodo! / totalIngresoPeriodo) * 100)
     : null
 
-  // 8. Distribución por categoría
+  // 9. Distribución por categoría
   const desgloseCategorias = Array.from(categoriasMap.entries())
     .map(([nombre, total]) => ({
       categoria: nombre,
@@ -118,7 +127,7 @@ export default defineEventHandler(async (event) => {
     }))
     .sort((a, b) => b.total - a.total)
 
-  // 9. Últimos gastos (solo del período actual y máximo 5)
+  // 10. Últimos gastos (solo del período actual y máximo 5)
   const ultimosGastos = gastosPeriodo.slice(0, 5)
 
   return {
@@ -136,6 +145,7 @@ export default defineEventHandler(async (event) => {
     desgloseTarjetas,
     resumenGasto: {
       limite,
+      tienePresupuestoPersonalizado,
       totalGastado: totalGastadoPeriodo,
       restante: restanteLimite,
       porcentajeLimite,

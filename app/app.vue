@@ -55,6 +55,7 @@ onMounted(() => {
       :dia-objetivo-nomina="effectiveConfig?.configuracion?.dia_objetivo_nomina"
     />
     <IncomeModal />
+    <EditBudgetModal />
 
     <!-- Inyección automática del Manifiesto PWA -->
     <VitePwaManifest />

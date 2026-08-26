@@ -46,3 +46,11 @@ export const reconciliaciones = sqliteTable('reconciliaciones', {
   notas: text('notas'),
   fecha_registro: text('fecha_registro').notNull()
 })
+
+export const presupuestosPeriodo = sqliteTable('presupuestos_periodo', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  periodo_inicio: text('periodo_inicio').notNull().unique(), // e.g. '2026-07-24'
+  periodo_fin: text('periodo_fin').notNull(), // e.g. '2026-08-25'
+  limite: real('limite').notNull(),
+  updated_at: text('updated_at').notNull()
+})

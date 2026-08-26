@@ -8,6 +8,10 @@ export const useFinanzas = () => {
   // Estado del modal de ingreso
   const incomeModalOpen = useState('income_modal_open', () => false)
 
+  // Estado del modal de presupuesto por período
+  const budgetModalOpen = useState('budget_modal_open', () => false)
+  const budgetModalData = useState<any>('budget_modal_data', () => null)
+
   // Trigger para refrescar datos en páginas
   const refreshKey = useState('finanzas_refresh_key', () => 0)
 
@@ -43,6 +47,16 @@ export const useFinanzas = () => {
     incomeModalOpen.value = false
   }
 
+  const openBudgetModal = (periodoData: { inicio: string; fin: string; etiqueta?: string; limite?: number; tienePresupuestoPersonalizado?: boolean }) => {
+    budgetModalData.value = { ...periodoData }
+    budgetModalOpen.value = true
+  }
+
+  const closeBudgetModal = () => {
+    budgetModalOpen.value = false
+    budgetModalData.value = null
+  }
+
   const formatCurrency = (val: number | null | undefined): string => {
     if (val === null || val === undefined) return '$0.00'
     return new Intl.NumberFormat('en-US', {
@@ -70,6 +84,8 @@ export const useFinanzas = () => {
     expenseModalOpen,
     expenseModalData,
     incomeModalOpen,
+    budgetModalOpen,
+    budgetModalData,
     refreshKey,
     triggerRefresh,
     openNewExpenseModal,
@@ -77,6 +93,8 @@ export const useFinanzas = () => {
     closeExpenseModal,
     openIncomeModal,
     closeIncomeModal,
+    openBudgetModal,
+    closeBudgetModal,
     formatCurrency,
     formatDate
   }

@@ -1,5 +1,5 @@
 import { db, initDatabase } from '../db'
-import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
+import { configuracion, gastos, ingresos, tarjetas, presupuestosPeriodo } from '../db/schema'
 import {
   generarHistorialPeriodos,
   perteneceAlPeriodoNomina,
@@ -26,6 +26,7 @@ export interface ItemHistorial extends PeriodoRango {
   totalIngreso: number
   ahorro: number | null
   limite: number
+  tienePresupuestoPersonalizado: boolean
   porcentajeLimite: number
   cumpleLimite: boolean
 }
@@ -43,6 +44,10 @@ export default defineEventHandler(async (event) => {
 
   const listaTarjetas = await db.select().from(tarjetas)
   const mapTarjetas = new Map(listaTarjetas.map(t => [t.id, t]))
+
+  // Obtener presupuestos personalizados por período
+  const listaPresupuestos = await db.select().from(presupuestosPeriodo)
+  const mapPresupuestos = new Map(listaPresupuestos.map(p => [p.periodo_inicio, p.limite]))
 
   // Obtener fecha base hoy o consultada
   const fechaBase = (query.fecha as string) || new Date().toISOString().slice(0, 10)
@@ -101,7 +106,12 @@ export default defineEventHandler(async (event) => {
     const totalIngreso = ingresosPeriodo.reduce((acc, ing) => acc + ing.monto, 0)
     const tieneIngreso = ingresosPeriodo.length > 0
     const ahorro = tieneIngreso ? (totalIngreso - totalGastado) : null
-    const limite = config.limite_gasto_periodo
+
+    // Presupuesto específico del período o fallback al global
+    const limiteCustom = mapPresupuestos.get(pInfo.inicio)
+    const tienePresupuestoPersonalizado = limiteCustom !== undefined
+    const limite = tienePresupuestoPersonalizado ? limiteCustom : config.limite_gasto_periodo
+
     const porcentajeLimite = limite > 0 ? Math.round((totalGastado / limite) * 100) : 0
 
     periodos.push({
@@ -115,6 +125,7 @@ export default defineEventHandler(async (event) => {
       totalIngreso,
       ahorro,
       limite,
+      tienePresupuestoPersonalizado,
       porcentajeLimite,
       cumpleLimite: totalGastado <= limite
     })

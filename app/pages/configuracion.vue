@@ -404,7 +404,7 @@ const seedDemo = async () => {
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-muted mb-1">Límite de Gasto por Período ($ USD)</label>
+            <label class="block text-xs font-medium text-muted mb-1">Presupuesto Base por Defecto ($ USD)</label>
             <UInput
               v-model="formGlobal.limite_gasto_periodo"
               type="number"
@@ -415,7 +415,7 @@ const seedDemo = async () => {
               required
             />
             <span class="text-[11px] text-muted mt-1 block">
-              Límite combinado para la suma de todas las tarjetas por período de nómina.
+              Presupuesto predeterminado para nuevos períodos. Puedes ajustar el presupuesto de cada período específico desde Historial o Inicio.
             </span>
           </div>
         </div>

@@ -95,6 +95,16 @@ export async function initDatabase() {
     );
   `)
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS presupuestos_periodo (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      periodo_inicio TEXT NOT NULL UNIQUE,
+      periodo_fin TEXT NOT NULL,
+      limite REAL NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `)
+
   // Sembrar tarjetas por defecto si no existen
   const tarjetasExist = await db.select().from(schema.tarjetas)
   if (tarjetasExist.length === 0) {

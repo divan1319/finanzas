@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { formatCurrency } = useFinanzas()
+const { formatCurrency, openBudgetModal } = useFinanzas()
 
 const mesesSeleccionados = ref(6)
 
@@ -64,6 +64,21 @@ const { data: historialData, pending, refresh } = useCachedFetch('/api/historial
           </div>
 
           <div class="flex items-center gap-2 flex-wrap">
+            <!-- Botón de Presupuesto del Período con edición rápida -->
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer"
+              :class="p.tienePresupuestoPersonalizado
+                ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20'
+                : 'border-muted/30 bg-muted/10 text-muted hover:border-muted/60 hover:text-foreground'"
+              :title="p.tienePresupuestoPersonalizado ? 'Presupuesto personalizado para este período. Clic para editar.' : 'Usa el límite global por defecto. Clic para personalizar este período.'"
+              @click="openBudgetModal({ inicio: p.inicio, fin: p.fin, etiqueta: p.etiqueta, limite: p.limite, tienePresupuestoPersonalizado: p.tienePresupuestoPersonalizado })"
+            >
+              <UIcon name="i-lucide-target" class="w-3.5 h-3.5 text-primary" />
+              <span>Presupuesto: {{ formatCurrency(p.limite) }}</span>
+              <UIcon name="i-lucide-pencil" class="w-3 h-3 opacity-70 ml-0.5" />
+            </button>
+
             <UBadge
               :color="p.cumpleLimite ? 'success' : 'error'"
               variant="subtle"
