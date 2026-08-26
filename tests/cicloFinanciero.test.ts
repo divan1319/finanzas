@@ -5,6 +5,7 @@ import {
   proximoCambioTarjeta,
   periodoActual,
   cicloFacturacion,
+  generarHistorialPeriodos,
   formatDateISO,
   parseISODate
 } from '../shared/utils/cicloFinanciero'
@@ -114,6 +115,37 @@ describe('Reglas de Negocio - Ciclo Financiero', () => {
       expect(cambio.tarjetaNueva).toBe('A')
       expect(cambio.fechaCambio).toBe('2026-09-06')
       expect(cambio.diasFaltantes).toBe(9)
+    })
+  })
+
+  describe('3.6 Historial de períodos consecutivos', () => {
+    it('Genera lista consecutiva de períodos sin saltarse ningún mes', () => {
+      const historial = generarHistorialPeriodos('2026-08-26', 6, 26)
+      expect(historial).toHaveLength(6)
+
+      // Período 1: Actual (26 ago – 24 sep 2026)
+      expect(historial[0]?.inicio).toBe('2026-08-26')
+      expect(historial[0]?.fin).toBe('2026-09-24')
+
+      // Período 2: El inmediatamente anterior (24 jul – 25 ago 2026)
+      expect(historial[1]?.inicio).toBe('2026-07-24')
+      expect(historial[1]?.fin).toBe('2026-08-25')
+
+      // Período 3: (26 jun – 23 jul 2026)
+      expect(historial[2]?.inicio).toBe('2026-06-26')
+      expect(historial[2]?.fin).toBe('2026-07-23')
+
+      // Período 4: (26 may – 25 jun 2026)
+      expect(historial[3]?.inicio).toBe('2026-05-26')
+      expect(historial[3]?.fin).toBe('2026-06-25')
+
+      // Período 5: (24 abr – 25 may 2026)
+      expect(historial[4]?.inicio).toBe('2026-04-24')
+      expect(historial[4]?.fin).toBe('2026-05-25')
+
+      // Período 6: (26 mar – 23 abr 2026)
+      expect(historial[5]?.inicio).toBe('2026-03-26')
+      expect(historial[5]?.fin).toBe('2026-04-23')
     })
   })
 })

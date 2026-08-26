@@ -373,6 +373,38 @@ export function periodoActual(
 }
 
 /**
+ * Obtiene el período de nómina inmediatamente anterior al período dado
+ */
+export function periodoAnterior(
+  periodo: PeriodoRango | { inicio: string },
+  diaObjetivoNomina = 26
+): PeriodoRango {
+  const [y = 2026, m = 1, d = 1] = periodo.inicio.split('-').map(Number)
+  const inicioDate = new Date(y, m - 1, d, 12, 0, 0)
+  const diaAnterior = new Date(inicioDate.getTime() - 24 * 60 * 60 * 1000)
+  return periodoActual(diaAnterior, diaObjetivoNomina)
+}
+
+/**
+ * Genera una lista consecutiva de N períodos de nómina hacia atrás desde una fecha base
+ */
+export function generarHistorialPeriodos(
+  fechaBase: Date | string = new Date(),
+  cantidad = 6,
+  diaObjetivoNomina = 26
+): PeriodoRango[] {
+  const periodos: PeriodoRango[] = []
+  let actual = periodoActual(fechaBase, diaObjetivoNomina)
+
+  for (let i = 0; i < cantidad; i++) {
+    periodos.push(actual)
+    actual = periodoAnterior(actual, diaObjetivoNomina)
+  }
+
+  return periodos
+}
+
+/**
  * Determina si un gasto debe pagarse y computarse en el período de nómina indicado
  */
 export function perteneceAlPeriodoNomina(

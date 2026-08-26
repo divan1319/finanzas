@@ -1,7 +1,7 @@
 import { db, initDatabase } from '../db'
 import { configuracion, gastos, ingresos, tarjetas } from '../db/schema'
 import {
-  periodoActual,
+  generarHistorialPeriodos,
   perteneceAlPeriodoNomina,
   type PeriodoRango
 } from '#shared/utils/cicloFinanciero'
@@ -46,93 +46,78 @@ export default defineEventHandler(async (event) => {
 
   // Obtener fecha base hoy o consultada
   const fechaBase = (query.fecha as string) || new Date().toISOString().slice(0, 10)
-  const [baseY = 2026, baseM = 1, baseD = 1] = fechaBase.split('-').map(Number)
 
   // Obtener todos los gastos para agrupar por período de nómina
   const todosLosGastos = await db.select()
     .from(gastos)
     .orderBy(desc(gastos.fecha), desc(gastos.id))
 
-  // Generar lista de los últimos N períodos
+  // Generar lista de los últimos N períodos consecutivos sin saltos
+  const listaRangos = generarHistorialPeriodos(fechaBase, mesesAtras, config.dia_objetivo_nomina)
   const periodos: ItemHistorial[] = []
-  const hoyDate = new Date(baseY, baseM - 1, baseD, 12, 0, 0)
 
-  let iterDate = new Date(hoyDate.getTime())
+  for (const pInfo of listaRangos) {
+    const gastosPeriodo = todosLosGastos.filter(g => {
+      const t = mapTarjetas.get(g.tarjeta_id)
+      return perteneceAlPeriodoNomina(g.fecha, t, pInfo, config.dia_objetivo_nomina)
+    })
 
-  for (let i = 0; i < mesesAtras; i++) {
-    const pInfo = periodoActual(iterDate, config.dia_objetivo_nomina)
+    let gastoTarjetaA = 0
+    let gastoTarjetaB = 0
+    let totalGastado = 0
+    const mapGastosTarjeta = new Map<number, number>()
 
-    // Evitar duplicados
-    const existe = periodos.find(p => p.inicio === pInfo.inicio)
-    if (!existe) {
-      const gastosPeriodo = todosLosGastos.filter(g => {
-        const t = mapTarjetas.get(g.tarjeta_id)
-        return perteneceAlPeriodoNomina(g.fecha, t, pInfo, config.dia_objetivo_nomina)
-      })
-
-      let gastoTarjetaA = 0
-      let gastoTarjetaB = 0
-      let totalGastado = 0
-      const mapGastosTarjeta = new Map<number, number>()
-
-      for (const g of gastosPeriodo) {
-        totalGastado += g.monto
-        mapGastosTarjeta.set(g.tarjeta_id, (mapGastosTarjeta.get(g.tarjeta_id) || 0) + g.monto)
-        const t = mapTarjetas.get(g.tarjeta_id)
-        if (t?.es_principal || t?.codigo === 'A') gastoTarjetaA += g.monto
-        else gastoTarjetaB += g.monto
-      }
-
-      const desgloseTarjetas = listaTarjetas.map(t => {
-        const total = mapGastosTarjeta.get(t.id) || 0
-        return {
-          id: t.id,
-          nombre: t.nombre,
-          codigo: t.codigo,
-          color: t.color || 'emerald',
-          es_principal: Boolean(t.es_principal),
-          total,
-          porcentaje: totalGastado > 0 ? Math.round((total / totalGastado) * 100) : 0
-        }
-      })
-
-      // Obtener ingresos de ese período
-      const ingresosPeriodo = await db.select()
-        .from(ingresos)
-        .where(
-          and(
-            gte(ingresos.fecha, pInfo.inicio),
-            lte(ingresos.fecha, pInfo.fin)
-          )
-        )
-
-      const totalIngreso = ingresosPeriodo.reduce((acc, ing) => acc + ing.monto, 0)
-      const tieneIngreso = ingresosPeriodo.length > 0
-      const ahorro = tieneIngreso ? (totalIngreso - totalGastado) : null
-      const limite = config.limite_gasto_periodo
-      const porcentajeLimite = limite > 0 ? Math.round((totalGastado / limite) * 100) : 0
-
-      periodos.push({
-        ...pInfo,
-        totalGastado,
-        gastoTarjetaA,
-        gastoTarjetaB,
-        desgloseTarjetas,
-        cantidadGastos: gastosPeriodo.length,
-        tieneIngreso,
-        totalIngreso,
-        ahorro,
-        limite,
-        porcentajeLimite,
-        cumpleLimite: totalGastado <= limite
-      })
+    for (const g of gastosPeriodo) {
+      totalGastado += g.monto
+      mapGastosTarjeta.set(g.tarjeta_id, (mapGastosTarjeta.get(g.tarjeta_id) || 0) + g.monto)
+      const t = mapTarjetas.get(g.tarjeta_id)
+      if (t?.es_principal || t?.codigo === 'A') gastoTarjetaA += g.monto
+      else gastoTarjetaB += g.monto
     }
 
-    // Retroceder un mes antes del inicio del período actual
-    const [pY = 2026, pM = 1] = pInfo.inicio.split('-').map(Number)
-    const prevMonth = pM === 1 ? 12 : pM - 1
-    const prevYear = pM === 1 ? pY - 1 : pY
-    iterDate = new Date(prevYear, prevMonth - 1, 10, 12, 0, 0)
+    const desgloseTarjetas = listaTarjetas.map(t => {
+      const total = mapGastosTarjeta.get(t.id) || 0
+      return {
+        id: t.id,
+        nombre: t.nombre,
+        codigo: t.codigo,
+        color: t.color || 'emerald',
+        es_principal: Boolean(t.es_principal),
+        total,
+        porcentaje: totalGastado > 0 ? Math.round((total / totalGastado) * 100) : 0
+      }
+    })
+
+    // Obtener ingresos de ese período
+    const ingresosPeriodo = await db.select()
+      .from(ingresos)
+      .where(
+        and(
+          gte(ingresos.fecha, pInfo.inicio),
+          lte(ingresos.fecha, pInfo.fin)
+        )
+      )
+
+    const totalIngreso = ingresosPeriodo.reduce((acc, ing) => acc + ing.monto, 0)
+    const tieneIngreso = ingresosPeriodo.length > 0
+    const ahorro = tieneIngreso ? (totalIngreso - totalGastado) : null
+    const limite = config.limite_gasto_periodo
+    const porcentajeLimite = limite > 0 ? Math.round((totalGastado / limite) * 100) : 0
+
+    periodos.push({
+      ...pInfo,
+      totalGastado,
+      gastoTarjetaA,
+      gastoTarjetaB,
+      desgloseTarjetas,
+      cantidadGastos: gastosPeriodo.length,
+      tieneIngreso,
+      totalIngreso,
+      ahorro,
+      limite,
+      porcentajeLimite,
+      cumpleLimite: totalGastado <= limite
+    })
   }
 
   return {
