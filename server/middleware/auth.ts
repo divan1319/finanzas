@@ -2,7 +2,7 @@ export default defineEventHandler(async (event) => {
   const path = getRequestPath(event)
 
   // Proteger únicamente los endpoints de /api, ignorando /api/auth
-  if (!path.startsWith('/api') || path.startsWith('/api/auth')) {
+  if (!path.startsWith('/api') || path.startsWith('/api/auth') || path.startsWith('/api/webhooks')) {
     return
   }
 
