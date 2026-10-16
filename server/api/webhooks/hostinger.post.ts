@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "~~/server/db";
 import { gastos, tarjetas } from "~~/server/db/schema";
+import { enviarPush } from "~~/server/utils/webPush";
+import { construirNotificacionGasto } from "#shared/utils/pushNotificaciones";
 
 interface HostingerWebhookPayload {
   id: string;
@@ -108,7 +110,7 @@ export default defineEventHandler(async (event) => {
 
   // Buscar la tarjeta por su codigo
   const [tarjeta] = await db
-    .select({ id: tarjetas.id })
+    .select({ id: tarjetas.id, nombre: tarjetas.nombre })
     .from(tarjetas)
     .where(eq(tarjetas.codigo, "A")) // ← ajusta al nombre real de tu columna
     .limit(1);
@@ -129,6 +131,23 @@ export default defineEventHandler(async (event) => {
       created_at: new Date().toISOString(),
     })
     .returning();
+
+  // Avisar a los dispositivos suscritos. Se espera el envío (en serverless el proceso
+  // puede congelarse al responder) pero un fallo nunca debe impedir responder 200,
+  // o Hostinger reintentaría y se duplicaría el gasto.
+  try {
+    await enviarPush(
+      construirNotificacionGasto({
+        id: nuevoGasto[0]?.id,
+        monto: compra.monto,
+        moneda: compra.moneda,
+        comercio: compra.comercio,
+        tarjetaNombre: tarjeta.nombre,
+      }),
+    );
+  } catch (e) {
+    console.error("[hostinger-webhook] error enviando notificación push", e);
+  }
 
   return {
     success: true,

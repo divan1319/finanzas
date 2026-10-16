@@ -37,6 +37,8 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
+      // Manejadores de eventos 'push' y 'notificationclick' (Web Push)
+      importScripts: ['sw-push.js'],
       navigateFallback: null,
       navigateFallbackDenylist: [/^\/api/, /^\/_auth/],
       globPatterns: process.env.NODE_ENV === 'production' ? ['**/*.{js,css,html,png,svg,ico,woff2}'] : undefined,
@@ -80,7 +82,13 @@ export default defineNuxtConfig({
     },
     tursoDatabaseUrl: process.env.TURSO_DATABASE_URL || '',
     tursoAuthToken: process.env.TURSO_AUTH_TOKEN || '',
-    hostingerWebhookEmailKey: process.env.HOSTINGER_WEBHOOK_EMAIL_KEY || ''
+    hostingerWebhookEmailKey: process.env.HOSTINGER_WEBHOOK_EMAIL_KEY || '',
+    // Web Push (VAPID). Generar con: pnpm exec web-push generate-vapid-keys
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+    vapidSubject: process.env.VAPID_SUBJECT || '',
+    public: {
+      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || ''
+    }
   },
 
   compatibilityDate: '2026-06-30',

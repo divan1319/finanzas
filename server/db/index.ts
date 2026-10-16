@@ -105,6 +105,17 @@ export async function initDatabase() {
     );
   `)
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      created_at TEXT NOT NULL
+    );
+  `)
+
   // Sembrar tarjetas por defecto si no existen
   const tarjetasExist = await db.select().from(schema.tarjetas)
   if (tarjetasExist.length === 0) {

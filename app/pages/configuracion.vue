@@ -313,6 +313,88 @@ const confirmDeleteCard = async () => {
   }
 }
 
+// Notificaciones Push (gastos registrados automáticamente desde el correo)
+const {
+  soportado: pushSoportado,
+  configurado: pushConfigurado,
+  permiso: pushPermiso,
+  suscrito: pushSuscrito,
+  cargando: pushCargando,
+  actualizarEstado: actualizarEstadoPush,
+  activar: activarPush,
+  desactivar: desactivarPush,
+  enviarPrueba: enviarPruebaPush
+} = usePushNotifications()
+
+const pushVerificado = ref(false)
+onMounted(async () => {
+  try {
+    await actualizarEstadoPush()
+  } catch (err) {
+    console.error('Error verificando notificaciones push', err)
+  } finally {
+    pushVerificado.value = true
+  }
+})
+
+const onActivarPush = async () => {
+  try {
+    await activarPush()
+    toast.add({
+      title: 'Notificaciones activadas',
+      description: 'Te avisaremos en este dispositivo cuando se registre un gasto desde tu correo.',
+      color: 'success',
+      icon: 'i-lucide-bell-ring'
+    })
+  } catch (err: any) {
+    toast.add({
+      title: 'No se pudieron activar',
+      description: err?.data?.message || err?.message || 'Ocurrió un problema al activar las notificaciones.',
+      color: 'error'
+    })
+  }
+}
+
+const onDesactivarPush = async () => {
+  try {
+    await desactivarPush()
+    toast.add({
+      title: 'Notificaciones desactivadas',
+      description: 'Este dispositivo ya no recibirá avisos de nuevos gastos.',
+      color: 'info',
+      icon: 'i-lucide-bell-off'
+    })
+  } catch (err: any) {
+    toast.add({
+      title: 'Error',
+      description: err?.message || 'No se pudieron desactivar las notificaciones.',
+      color: 'error'
+    })
+  }
+}
+
+const probandoPush = ref(false)
+const onProbarPush = async () => {
+  probandoPush.value = true
+  try {
+    await enviarPruebaPush()
+    toast.add({
+      title: 'Notificación enviada',
+      description: 'Deberías verla en unos segundos.',
+      color: 'success',
+      icon: 'i-lucide-send'
+    })
+  } catch (err: any) {
+    toast.add({
+      title: 'No se pudo enviar la prueba',
+      description: err?.data?.message || err?.message || 'Revisa la configuración del servidor.',
+      color: 'error'
+    })
+  } finally {
+    probandoPush.value = false
+  }
+}
+
 // Mantenimiento de Datos y Demo
 const confirmResetModalOpen = ref(false)
 const resetting = ref(false)
@@ -560,7 +642,83 @@ const seedDemo = async () => {
       </div>
     </div>
 
-    <!-- 3. Mantenimiento de Datos y Demo -->
+    <!-- 3. Notificaciones Push -->
+    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          <UIcon name="i-lucide-bell" class="w-5 h-5" />
+        </div>
+        <div>
+          <h3 class="font-bold text-foreground">Notificaciones Push</h3>
+          <p class="text-xs text-muted">Recibe un aviso en este dispositivo cuando se registre un gasto automáticamente desde tu correo</p>
+        </div>
+      </div>
+
+      <div v-if="!pushVerificado" class="py-4 text-center text-muted text-xs">
+        <UIcon name="i-lucide-loader-2" class="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
+        <span>Verificando compatibilidad...</span>
+      </div>
+
+      <div v-else-if="!pushSoportado" class="p-3.5 rounded-xl border border-muted/20 bg-muted/5 text-xs text-muted leading-relaxed">
+        Este navegador no soporta notificaciones push.
+        En iPhone/iPad primero agrega la app a la pantalla de inicio (Compartir → Agregar a inicio) y ábrela desde ahí.
+      </div>
+
+      <div v-else-if="!pushConfigurado" class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs leading-relaxed">
+        <strong class="text-amber-500">Falta configuración en el servidor.</strong>
+        Define las variables <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code> y <code>VAPID_SUBJECT</code> y vuelve a desplegar.
+      </div>
+
+      <div v-else-if="pushPermiso === 'denied'" class="p-3.5 rounded-xl border border-error/30 bg-error/10 text-xs leading-relaxed">
+        <strong class="text-error">Notificaciones bloqueadas.</strong>
+        Permite las notificaciones para este sitio desde los ajustes del navegador o del sistema y recarga la página.
+      </div>
+
+      <div v-else class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+        <span
+          class="inline-flex items-center gap-1.5 text-xs font-medium"
+          :class="pushSuscrito ? 'text-success' : 'text-muted'"
+        >
+          <UIcon :name="pushSuscrito ? 'i-lucide-bell-ring' : 'i-lucide-bell-off'" class="w-4 h-4" />
+          {{ pushSuscrito ? 'Activas en este dispositivo' : 'Desactivadas en este dispositivo' }}
+        </span>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <template v-if="pushSuscrito">
+            <UButton
+              size="sm"
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-send"
+              label="Enviar prueba"
+              :loading="probandoPush"
+              @click="onProbarPush"
+            />
+            <UButton
+              size="sm"
+              color="error"
+              variant="subtle"
+              icon="i-lucide-bell-off"
+              label="Desactivar"
+              :loading="pushCargando"
+              @click="onDesactivarPush"
+            />
+          </template>
+          <UButton
+            v-else
+            size="sm"
+            color="primary"
+            icon="i-lucide-bell-ring"
+            label="Activar notificaciones"
+            :loading="pushCargando"
+            class="font-semibold shadow-xs"
+            @click="onActivarPush"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Mantenimiento de Datos y Demo -->
     <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-muted/20 text-foreground flex items-center justify-center">

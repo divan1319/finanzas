@@ -54,3 +54,13 @@ export const presupuestosPeriodo = sqliteTable('presupuestos_periodo', {
   limite: real('limite').notNull(),
   updated_at: text('updated_at').notNull()
 })
+
+// Suscripciones Web Push: una fila por dispositivo/navegador que activó las notificaciones
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  endpoint: text('endpoint').notNull().unique(), // URL única del servicio push del navegador
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  user_agent: text('user_agent'),
+  created_at: text('created_at').notNull()
+})
