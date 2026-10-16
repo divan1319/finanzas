@@ -30,19 +30,18 @@ interface HostingerWebhookPayload {
 }
 
 const REGEX_COMPRA =
-  /X+(\d{4})\s+por\s+([A-Z]{3})\s+([\d,]+(?:\.\d{1,2})?)\s+en\s+(.+?)\s+el\s+d[ií]a\s+(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/i;
+  /X+(\d{4})\s+por\s+([A-Z]{3})\s+([\d,]+(?:\.\d{1,2})?)\s+en\s+(.+?)\s+el\s+d[ií]a\s+(\d{4}-\d{2}-\d{2})/i;
 
 function parsearCompra(texto: string) {
   const m = texto.replace(/\s+/g, " ").match(REGEX_COMPRA);
   if (!m) return null;
-  const [, ultimos4, moneda, montoStr, comercio, fecha, hora] = m;
+  const [, ultimos4, moneda, montoStr, comercio, fecha] = m;
   return {
     ultimos4,
     moneda: moneda!.toUpperCase(),
     monto: Number(montoStr!.replace(/,/g, "")),
     comercio: comercio!.trim(),
-    fecha, // "2026-10-15"
-    hora, // "12:00" (hora local de El Salvador, según el banco)
+    fecha,
   };
 }
 
@@ -71,7 +70,6 @@ export default defineEventHandler(async (event) => {
 
   const payload = await readBody<HostingerWebhookPayload>(event);
 
-  console.log(JSON.stringify(payload))
 
   if (payload?.event !== "message.received" || !payload?.data) {
     return { ok: true, ignored: true };
