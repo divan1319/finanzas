@@ -75,12 +75,12 @@ const colorClasses = computed(() => {
 <template>
   <div
     class="relative overflow-hidden rounded-2xl border p-6 sm:p-8 transition-all shadow-lg"
-    :class="colorClasses.cardBg"
+    
   >
     <!-- Background Glow Effect -->
     <div
       class="absolute -right-16 -top-16 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
-      :class="colorClasses.glow"
+      
     />
 
     <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -88,9 +88,9 @@ const colorClasses = computed(() => {
         <div class="flex items-center gap-2.5 flex-wrap">
           <span
             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border shadow-xs"
-            :class="colorClasses.badge"
+           
           >
-            <span class="w-2 h-2 rounded-full animate-ping" :class="colorClasses.glow" />
+            <span class="w-2 h-2 rounded-full animate-ping"  />
             Tarjeta Activa Hoy
           </span>
 

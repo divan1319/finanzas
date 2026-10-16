@@ -79,7 +79,8 @@ export default defineNuxtConfig({
       password: process.env.NUXT_SESSION_PASSWORD || 'finanzas-super-secret-session-key-32-chars-long-abc'
     },
     tursoDatabaseUrl: process.env.TURSO_DATABASE_URL || '',
-    tursoAuthToken: process.env.TURSO_AUTH_TOKEN || ''
+    tursoAuthToken: process.env.TURSO_AUTH_TOKEN || '',
+    hostingerWebhookEmailKey: process.env.HOSTINGER_WEBHOOK_EMAIL_KEY || ''
   },
 
   compatibilityDate: '2026-06-30',
