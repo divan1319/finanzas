@@ -56,3 +56,13 @@ export function base64UrlAUint8Array(base64Url: string): Uint8Array<ArrayBuffer>
   }
   return output
 }
+
+export function construirNotificacionError(motivo: string, detalle?: string): PushPayload {
+  const texto = detalle ? `${motivo}: ${detalle}` : motivo
+
+  return {
+    title: '⚠️ Error en el registro de gastos',
+    body: texto.length > 150 ? `${texto.slice(0, 147)}...` : texto,
+    url: '/gastos'
+  }
+}
