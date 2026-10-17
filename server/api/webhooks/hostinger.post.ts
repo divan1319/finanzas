@@ -80,6 +80,15 @@ export default defineEventHandler(async (event) => {
   const { eventId, subject, from, date, plainBody, htmlBody, bodyUrl } =
     payload.data;
 
+    if (bodyUrl) {
+      const completo = await $fetch<any>(bodyUrl);
+      console.log("[bodyUrl] tipo:", typeof completo);
+      console.log(
+        "[bodyUrl] contenido:",
+        JSON.stringify(completo).slice(0, 4000),
+      );
+    }
+
   // 1) Intentar con plainBody; 2) htmlBody; 3) descargar bodyUrl
   let compra =
     parsearCompra(plainBody || "") ?? parsearCompra(quitarHtml(htmlBody || ""));
