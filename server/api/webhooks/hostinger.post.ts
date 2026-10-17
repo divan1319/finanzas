@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { like } from "drizzle-orm";
 import { db } from "~~/server/db";
 import { gastos, tarjetas } from "~~/server/db/schema";
 import { enviarPush } from "~~/server/utils/webPush";
@@ -31,28 +31,62 @@ interface HostingerWebhookPayload {
   };
 }
 
-const REGEX_COMPRA =
+interface Compra {
+  ultimos4: string;
+  moneda: string;
+  monto: number;
+  comercio: string;
+  fecha: string; // YYYY-MM-DD
+}
+
+const REGEX_CUSCATLAN =
   /X+(\d{4})\s+por\s+([A-Z]{3})\s+([\d,]+(?:\.\d{1,2})?)\s+en\s+(.+?)\s+el\s+d[ií]a\s+(\d{4}-\d{2}-\d{2})/i;
 
-function parsearCompra(texto: string) {
-  const m = texto.replace(/\s+/g, " ").match(REGEX_COMPRA);
+const REGEX_AGRICOLA =
+  /tarjeta de cr[eé]dito\s+(\d{4})\s+ha realizado una compra por\s+([A-Z]{3})\s+([\d,]+(?:\.\d{1,2})?)\s+en\s+(.+?)\s+Fecha\/Hora:\s*(\d{2})\/(\d{2})\/(\d{4})/i;
+
+const normalizar = (texto: string) => texto.replace(/\s+/g, " ");
+
+function parsearCuscatlan(texto: string): Compra | null {
+  const m = normalizar(texto).match(REGEX_CUSCATLAN);
   if (!m) return null;
   const [, ultimos4, moneda, montoStr, comercio, fecha] = m;
   return {
-    ultimos4,
+    ultimos4: ultimos4!,
     moneda: moneda!.toUpperCase(),
     monto: Number(montoStr!.replace(/,/g, "")),
     comercio: comercio!.trim(),
-    fecha,
+    fecha: fecha!,
   };
 }
 
-function quitarHtml(html: string) {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&iacute;/g, "í");
+function parsearAgricola(texto: string): Compra | null {
+  const m = normalizar(texto).match(REGEX_AGRICOLA);
+  if (!m) return null;
+  const [, ultimos4, moneda, montoStr, comercio, dd, mm, yyyy] = m;
+  return {
+    ultimos4: ultimos4!,
+    moneda: moneda!.toUpperCase(),
+    monto: Number(montoStr!.replace(/,/g, "")),
+    comercio: comercio!.trim(),
+    fecha: `${yyyy}-${mm}-${dd}`, // el Agrícola manda DD/MM/AAAA
+  };
+}
+
+// El texto completo viene en bodyUrl (plainBody está truncado a 200 caracteres).
+// Si la descarga falla, se usa plainBody como respaldo.
+async function obtenerTexto(bodyUrl: string, plainBody: string) {
+  if (bodyUrl) {
+    try {
+      const completo = await $fetch<{ plainText?: string; html?: string }>(
+        bodyUrl,
+      );
+      if (completo?.plainText) return completo.plainText;
+    } catch (e) {
+      console.error("[hostinger-webhook] error descargando bodyUrl", e);
+    }
+  }
+  return plainBody || "";
 }
 
 export default defineEventHandler(async (event) => {
@@ -72,42 +106,22 @@ export default defineEventHandler(async (event) => {
 
   const payload = await readBody<HostingerWebhookPayload>(event);
 
-
   if (payload?.event !== "message.received" || !payload?.data) {
     return { ok: true, ignored: true };
   }
 
-  const { eventId, subject, from, date, plainBody, htmlBody, bodyUrl } =
-    payload.data;
+  const { eventId, subject, from, plainBody, bodyUrl } = payload.data;
 
-    if (bodyUrl) {
-      const completo = await $fetch<any>(bodyUrl);
-      console.log("[bodyUrl] tipo:", typeof completo);
-      console.log(
-        "[bodyUrl] contenido:",
-        JSON.stringify(completo).slice(0, 4000),
-      );
-    }
-
-  // 1) Intentar con plainBody; 2) htmlBody; 3) descargar bodyUrl
-  let compra =
-    parsearCompra(plainBody || "") ?? parsearCompra(quitarHtml(htmlBody || ""));
-
-  if (!compra && bodyUrl) {
-    try {
-      const completo = await $fetch<string>(bodyUrl, { responseType: "text" });
-      compra = parsearCompra(quitarHtml(completo));
-    } catch (e) {
-      console.error("[hostinger-webhook] error descargando bodyUrl", e);
-    }
-  }
+  // 2. Obtener el texto completo y probar los parsers de cada banco
+  const texto = await obtenerTexto(bodyUrl, plainBody);
+  const compra = parsearCuscatlan(texto) ?? parsearAgricola(texto);
 
   if (!compra) {
     console.warn("[hostinger-webhook] no se pudo parsear", {
       eventId,
       subject,
       from,
-      plainBody,
+      texto: texto.slice(0, 1000),
     });
     return { ok: true, parsed: false }; // 200 para que no reintente indefinidamente
   }
@@ -117,11 +131,11 @@ export default defineEventHandler(async (event) => {
     // decide: guardarla igual, convertirla o ignorarla
   }
 
-  // Buscar la tarjeta por su codigo
+  // 3. Buscar la tarjeta por sus últimos 4 dígitos (el nombre termina en ellos, ej. "Visa - 1231")
   const [tarjeta] = await db
     .select({ id: tarjetas.id, nombre: tarjetas.nombre })
     .from(tarjetas)
-    .where(eq(tarjetas.codigo, "A")) // ← ajusta al nombre real de tu columna
+    .where(like(tarjetas.nombre, `%${compra.ultimos4}`))
     .limit(1);
 
   if (!tarjeta) {
@@ -129,19 +143,20 @@ export default defineEventHandler(async (event) => {
     return { ok: true, parsed: true, tarjeta: "no encontrada" };
   }
 
+  // 4. Guardar el gasto
   const nuevoGasto = await db
     .insert(gastos)
     .values({
       tarjeta_id: tarjeta.id,
-      fecha: compra.fecha!,
-      monto: Number(compra.monto!),
-      descripcion: compra.comercio.trim(),
+      fecha: compra.fecha,
+      monto: compra.monto,
+      descripcion: compra.comercio,
       categoria: "Otros",
       created_at: new Date().toISOString(),
     })
     .returning();
 
-  // Avisar a los dispositivos suscritos. Se espera el envío (en serverless el proceso
+  // 5. Avisar a los dispositivos suscritos. Se espera el envío (en serverless el proceso
   // puede congelarse al responder) pero un fallo nunca debe impedir responder 200,
   // o Hostinger reintentaría y se duplicaría el gasto.
   try {
