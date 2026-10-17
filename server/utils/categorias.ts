@@ -11,8 +11,12 @@ const REGLAS_CATEGORIA: Array<{ categoria: string; palabras: string[] }> = [
     palabras: ["SELECTOS", "SIMAN"],
   },
   {
+    categoria: "Hogar",
+    palabras: ["BANCA DIGITAL", "TIGO_FACTURAS"],
+  },
+  {
     categoria: "Servicios",
-    palabras: ["BANCA DIGITAL"],
+    palabras: ["TIGO EL SALVADOR"],
   },
   {
     categoria: "Suscripciones",
