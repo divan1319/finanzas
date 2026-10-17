@@ -2,6 +2,7 @@ import { like } from "drizzle-orm";
 import { db } from "~~/server/db";
 import { gastos, tarjetas } from "~~/server/db/schema";
 import { enviarPush } from "~~/server/utils/webPush";
+import { obtenerCategoria } from "~~/server/utils/categorias";
 import { construirNotificacionGasto } from "#shared/utils/pushNotificaciones";
 
 interface HostingerWebhookPayload {
@@ -151,7 +152,7 @@ export default defineEventHandler(async (event) => {
       fecha: compra.fecha,
       monto: compra.monto,
       descripcion: compra.comercio,
-      categoria: "Otros",
+      categoria: obtenerCategoria(compra.comercio),
       created_at: new Date().toISOString(),
     })
     .returning();
