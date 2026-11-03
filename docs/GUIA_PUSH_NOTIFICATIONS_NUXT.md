@@ -255,12 +255,12 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
 
 ---
 
-## 7. Utilidades Compartidas (`shared/utils/push.ts`)
+## 7. Utilidades Compartidas (`shared/utils/pushNotificaciones.ts`)
 
-Crea un archivo utilitario que funcione tanto en cliente como en servidor:
+Crea un archivo utilitario en `shared/utils/` para que pueda importarse tanto en el frontend como en el backend (`#shared/utils/pushNotificaciones`):
 
 ```typescript
-// shared/utils/push.ts
+// shared/utils/pushNotificaciones.ts
 
 export interface PushPayload {
   title: string
@@ -268,6 +268,49 @@ export interface PushPayload {
   url?: string
   tag?: string
   icon?: string
+}
+
+export interface DatosNotificacionGasto {
+  id?: number
+  monto: number
+  moneda?: string
+  comercio: string
+  tarjetaNombre?: string | null
+}
+
+export function formatearMonto(monto: number, moneda = 'USD'): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: moneda,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(monto)
+  } catch {
+    return `${moneda} ${monto.toFixed(2)}`
+  }
+}
+
+export function construirNotificacionGasto(datos: DatosNotificacionGasto): PushPayload {
+  const monto = formatearMonto(datos.monto, datos.moneda)
+  const detalle = datos.tarjetaNombre ? ` · ${datos.tarjetaNombre}` : ''
+
+  return {
+    title: 'Nuevo gasto registrado',
+    body: `${monto} en ${datos.comercio}${detalle}`,
+    url: '/gastos',
+    tag: datos.id ? `gasto-${datos.id}` : undefined
+  }
+}
+
+export function construirNotificacionError(motivo: string, detalle?: string): PushPayload {
+  const texto = detalle ? `${motivo}: ${detalle}` : motivo
+
+  return {
+    title: '⚠️ Error en el registro de gastos',
+    body: texto.length > 150 ? `${texto.slice(0, 147)}...` : texto,
+    url: '/gastos'
+  }
 }
 
 // Convierte la llave pública VAPID (base64url) al Uint8Array binario que espera pushManager.subscribe()
@@ -300,7 +343,7 @@ import webpush from 'web-push'
 import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { pushSubscriptions } from '../db/schema'
-import { suscripcionExpirada, type PushPayload } from '#shared/utils/push'
+import { suscripcionExpirada, type PushPayload } from '#shared/utils/pushNotificaciones'
 
 export interface ResultadoEnvioPush {
   total: number
@@ -439,21 +482,60 @@ import { enviarPush, pushConfigurado } from '../../utils/webPush'
 export default defineEventHandler(async (event) => {
   const body = await readBody<{ endpoint?: string }>(event)
   if (!body?.endpoint) {
-    throw createError({ statusCode: 400, message: 'Falta el endpoint del dispositivo' })
+    throw createError({ statusCode: 400, message: 'Falta el endpoint de la suscripción' })
   }
 
   if (!pushConfigurado()) {
-    throw createError({ statusCode: 503, message: 'Web Push no está configurado en el servidor' })
+    throw createError({
+      statusCode: 503,
+      message: 'Web Push no está configurado en el servidor (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT)'
+    })
   }
 
   const resultado = await enviarPush({
-    title: '¡Notificaciones activas!',
-    body: 'Este es un mensaje de prueba para confirmar que tu PWA recibe notificaciones en segundo plano.',
-    url: '/'
+    title: 'Notificaciones activas',
+    body: 'Así te avisaremos cuando se registre un gasto desde tu correo.',
+    url: '/configuracion',
+    tag: 'push-prueba'
   }, { endpoint: body.endpoint })
+
+  if (resultado.total === 0 || resultado.eliminadas > 0) {
+    throw createError({
+      statusCode: 404,
+      message: 'Este dispositivo no tiene una suscripción vigente. Desactiva y vuelve a activar las notificaciones.'
+    })
+  }
+
+  if (resultado.enviadas === 0) {
+    throw createError({
+      statusCode: 502,
+      message: 'El servicio push del navegador rechazó la notificación. Revisa los logs del servidor.'
+    })
+  }
 
   return { success: true, ...resultado }
 })
+```
+
+### 8.5. Disparo desde un Evento de Negocio o Webhook (`server/api/webhooks/hostinger.post.ts`)
+
+En este proyecto, cuando llega un correo bancario al webhook de Hostinger, el servidor registra el gasto en la base de datos y notifica a todos los dispositivos suscritos sin bloquear ni hacer fallar la respuesta `200 OK` del webhook:
+
+```typescript
+// Fragmento de server/api/webhooks/hostinger.post.ts
+try {
+  await enviarPush(
+    construirNotificacionGasto({
+      id: nuevoGasto[0]?.id,
+      monto: compra.monto,
+      moneda: compra.moneda,
+      comercio: compra.comercio,
+      tarjetaNombre: tarjeta.nombre
+    })
+  )
+} catch (e) {
+  console.error('[hostinger-webhook] error enviando notificación push', e)
+}
 ```
 
 ---
@@ -464,7 +546,7 @@ Este composable encapsula toda la interacción con la API nativa del navegador, 
 
 ```typescript
 // app/composables/usePushNotifications.ts
-import { base64UrlAUint8Array } from '#shared/utils/push'
+import { base64UrlAUint8Array } from '#shared/utils/pushNotificaciones'
 
 const SW_READY_TIMEOUT_MS = 10000
 const SUBSCRIBE_TIMEOUT_MS = 30000
@@ -731,3 +813,216 @@ const onProbar = async () => {
    - Cada vez que envíes una notificación, captura los códigos `404` y `410` (*Gone*). Indican que el usuario desinstaló la PWA o revocó el permiso desde el sistema. Elimina esa fila de la base de datos para no gastar recursos en envíos infructuosos.
 5. **Pruebas Locales**:
    - Para probar en local, recuerda compilar la app con `pnpm build && pnpm preview` para que Vite genere el Service Worker de Workbox, o activa `devOptions: { enabled: true }` en `nuxt.config.ts`.
+
+---
+
+## 12. Auditoría y Mejoras Recomendadas para este Proyecto (Paso a Paso)
+
+Tras revisar la implementación actual del repositorio ([`public/sw-push.js`](../public/sw-push.js), [`server/utils/webPush.ts`](../server/utils/webPush.ts), [`server/api/push/subscribe.post.ts`](../server/api/push/subscribe.post.ts), [`app/composables/usePushNotifications.ts`](../app/composables/usePushNotifications.ts) y [`server/api/webhooks/hostinger.post.ts`](../server/api/webhooks/hostinger.post.ts)), estas son las **6 mejoras técnicas** recomendadas junto con los pasos exactos para implementarlas:
+
+---
+
+### Mejora 1: Protección Anti-SSRF Validando Dominios de Proveedores Push en `subscribe.post.ts`
+
+- **Diagnóstico actual**: En [`server/api/push/subscribe.post.ts`](../server/api/push/subscribe.post.ts#L25), solo se verifica que el `endpoint` comience con `https:`. Como `webpush.sendNotification()` realiza peticiones `POST` desde el servidor hacia el `endpoint` almacenado, aceptar cualquier URL arbitraria expone al backend a **Server-Side Request Forgery (SSRF)** si alguien registra una URL hacia un servicio interno o de terceros.
+- **Pasos para implementarlo**:
+  1. En [`shared/utils/pushNotificaciones.ts`](../shared/utils/pushNotificaciones.ts), agrega una función validadora con la lista blanca (*allowlist*) de los proveedores oficiales W3C (Google FCM, Apple APNs, Mozilla Autopush y Microsoft WNS):
+     ```typescript
+     // shared/utils/pushNotificaciones.ts
+     const DOMINIOS_PUSH_PERMITIDOS = [
+       'fcm.googleapis.com',
+       'android.googleapis.com',
+       'updates.push.services.mozilla.com',
+       'push.services.mozilla.com',
+       'web.push.apple.com',
+       'notify.windows.com'
+     ]
+
+     export function esEndpointPushValido(endpoint: string): boolean {
+       if (!URL.canParse(endpoint)) return false
+       const url = new URL(endpoint)
+       if (url.protocol !== 'https:') return false
+       return DOMINIOS_PUSH_PERMITIDOS.some(
+         dominio => url.hostname === dominio || url.hostname.endsWith(`.${dominio}`)
+       )
+     }
+     ```
+  2. En [`server/api/push/subscribe.post.ts`](../server/api/push/subscribe.post.ts), reemplaza la validación actual por `esEndpointPushValido(endpoint)`:
+     ```typescript
+     import { esEndpointPushValido } from '#shared/utils/pushNotificaciones'
+
+     if (!esEndpointPushValido(endpoint)) {
+       throw createError({
+         statusCode: 400,
+         message: 'El endpoint no pertenece a un proveedor de notificaciones Web Push reconocido'
+       })
+     }
+     ```
+
+---
+
+### Mejora 2: Renovación Automática en Segundo Plano (`pushsubscriptionchange`) en `public/sw-push.js`
+
+- **Diagnóstico actual**: [`public/sw-push.js`](../public/sw-push.js) solo escucha `push` y `notificationclick`. Los proveedores (especialmente Apple en iOS y Firefox) pueden expirar o rotar las llaves de una suscripción en segundo plano y disparar el evento `pushsubscriptionchange`. Al no estar manejado, el servidor recibe un `410 Gone` en el siguiente gasto, borra la suscripción y el usuario deja de recibir alertas sin enterarse.
+- **Pasos para implementarlo**:
+  1. Abre [`public/sw-push.js`](../public/sw-push.js) y añade al final el listener para `pushsubscriptionchange`:
+     ```javascript
+     // public/sw-push.js
+     self.addEventListener('pushsubscriptionchange', (event) => {
+       event.waitUntil((async () => {
+         try {
+           const opciones = event.oldSubscription?.options
+           if (!opciones?.applicationServerKey) return
+
+           const nuevaSuscripcion = await self.registration.pushManager.subscribe(opciones)
+
+           await fetch('/api/push/subscribe', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(nuevaSuscripcion.toJSON())
+           })
+
+           if (event.oldSubscription?.endpoint && event.oldSubscription.endpoint !== nuevaSuscripcion.endpoint) {
+             await fetch('/api/push/unsubscribe', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ endpoint: event.oldSubscription.endpoint })
+             }).catch(() => {})
+           }
+         } catch (err) {
+           console.error('[sw-push] Error renovando suscripción en pushsubscriptionchange:', err)
+         }
+       })())
+     })
+     ```
+
+---
+
+### Mejora 3: Auto-Sincronización Silenciosa Cliente-Servidor en `usePushNotifications.ts`
+
+- **Diagnóstico actual**: En [`app/composables/usePushNotifications.ts`](../app/composables/usePushNotifications.ts#L44-L54), `actualizarEstado()` revisa `registro?.pushManager.getSubscription()` localmente y marca `suscrito.value = true`. Si por alguna razón la tabla `push_subscriptions` en la base de datos se vació o la fila fue borrada por un error temporal, la interfaz en Configuración le dice al usuario *"Activas en este dispositivo"*, pero el servidor no tiene su registro.
+- **Pasos para implementarlo**:
+  1. En [`app/composables/usePushNotifications.ts`](../app/composables/usePushNotifications.ts), dentro de `actualizarEstado()`, si el navegador ya tiene una suscripción válida y hay conexión a internet, envía un *upsert* silencioso a `/api/push/subscribe` una vez por sesión:
+     ```typescript
+     const sincronizadoEnSesion = useState('push_synced_in_session', () => false)
+
+     const actualizarEstado = async () => {
+       soportado.value = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+       if (!soportado.value) return
+
+       permiso.value = Notification.permission
+       const registro = await navigator.serviceWorker.getRegistration()
+       const suscripcion = await registro?.pushManager.getSubscription()
+
+       suscrito.value = Boolean(suscripcion) && permiso.value === 'granted'
+       endpointActual.value = suscripcion?.endpoint ?? null
+
+       // Auto-curación: asegurar que el backend conozca esta suscripción activa
+       if (suscrito.value && suscripcion && !sincronizadoEnSesion.value && navigator.onLine) {
+         sincronizadoEnSesion.value = true
+         $fetch('/api/push/subscribe', {
+           method: 'POST',
+           body: suscripcion.toJSON()
+         }).catch(() => {
+           sincronizadoEnSesion.value = false
+         })
+       }
+     }
+     ```
+
+---
+
+### Mejora 4: Enriquecer `public/sw-push.js` con `badge`, `renotify` y Actualización Reactiva de Datos (`postMessage`)
+
+- **Diagnóstico actual**:
+  1. En el archivo real [`public/sw-push.js`](../public/sw-push.js#L14-L20) (a diferencia del fragmento de ejemplo de la sección 5), no se incluye `badge: '/pwa-192x192.png'` ni `renotify: Boolean(data.tag)`. Cuando se envía un `tag` repetido en Android sin `renotify: true`, el sistema actualiza el texto pero no vibra ni emite sonido.
+  2. Cuando llega un push de un nuevo gasto mientras el usuario tiene la app abierta, los datos del Dashboard no se refrescan automáticamente hasta que recargue la página.
+- **Pasos para implementarlo**:
+  1. Actualiza [`public/sw-push.js`](../public/sw-push.js) para añadir `badge`, `renotify` y avisar a las pestañas abiertas mediante `ventana.postMessage`:
+     ```javascript
+     // public/sw-push.js
+     self.addEventListener('push', (event) => {
+       let data = {}
+       if (event.data) {
+         try {
+           data = event.data.json()
+         } catch {
+           data = { body: event.data.text() }
+         }
+       }
+
+       event.waitUntil((async () => {
+         await self.registration.showNotification(data.title || 'Finanzas', {
+           body: data.body || '',
+           icon: data.icon || '/pwa-192x192.png',
+           badge: data.badge || '/pwa-192x192.png',
+           tag: data.tag,
+           renotify: Boolean(data.tag),
+           data: { url: data.url || '/' }
+         })
+
+         // Avisar a la app abierta para que refresque los gastos en tiempo real
+         const ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+         for (const ventana of ventanas) {
+           ventana.postMessage({ type: 'PUSH_GASTO_RECIBIDO', payload: data })
+         }
+       })())
+     })
+     ```
+  2. En [`app/app.vue`](../app/app.vue) (dentro de `onMounted`), escucha el mensaje del Service Worker para refrescar los datos automáticamente cuando entre un gasto por correo:
+     ```typescript
+     if ('serviceWorker' in navigator) {
+       navigator.serviceWorker.addEventListener('message', (event) => {
+         if (event.data?.type === 'PUSH_GASTO_RECIBIDO') {
+           refreshNuxtData(['dashboard', 'gastos', 'historial', 'reconciliaciones'])
+         }
+       })
+     }
+     ```
+
+---
+
+### Mejora 5: Cabecera `topic` y Reintento en Errores Transitorios (`429` / `5xx`) en `server/utils/webPush.ts`
+
+- **Diagnóstico actual**: En [`server/utils/webPush.ts`](../server/utils/webPush.ts#L49-L54):
+  1. No se pasa la propiedad `topic` a `webpush.sendNotification()`. Según el RFC 8030, si el dispositivo está sin señal y se envían varias notificaciones con el mismo `topic` (ej. `push-prueba`), el servidor de Google/Apple conserva solo la más reciente en cola.
+  2. Si FCM o APNs devuelven un error temporal `429 Too Many Requests` o `503 Service Unavailable`, la notificación se descarta inmediatamente.
+- **Pasos para implementarlo**:
+  1. En [`server/utils/webPush.ts`](../server/utils/webPush.ts), normaliza el `tag` para usarlo como `topic` (máx. 32 caracteres alfanuméricos URL-safe) y agrega un reintento único para códigos `429` o `>= 500`:
+     ```typescript
+     // Convierte el tag a un topic RFC 8030 válido (máx 32 chars base64url)
+     function normalizarTopic(tag?: string): string | undefined {
+       if (!tag) return undefined
+       const limpio = tag.replace(/[^A-Za-z0-9\-_]/g, '').slice(0, 32)
+       return limpio || undefined
+     }
+     ```
+  2. Pasa `topic: normalizarTopic(payload.tag)` dentro de las opciones de `webpush.sendNotification(...)` y, si `statusCode === 429 || (statusCode && statusCode >= 500)`, espera `800ms` y reintenta una vez antes de contarlo en `resultado.fallidas`.
+
+---
+
+### Mejora 6: Idempotencia en el Webhook que Dispara las Notificaciones (`server/api/webhooks/hostinger.post.ts`)
+
+- **Diagnóstico actual**: En [`server/api/webhooks/hostinger.post.ts`](../server/api/webhooks/hostinger.post.ts#L132-L204), cuando se recibe un correo con `eventId` o `messageId`, el endpoint inserta el gasto y dispara `enviarPush()`. Si el servidor de correo de Hostinger experimenta un corte de red al leer la respuesta HTTP y reintenta el envío del mismo webhook, se registrará el gasto por duplicado y se enviarán dos notificaciones Push idénticas al usuario.
+- **Pasos para implementarlo**:
+  1. Antes de insertar en la tabla `gastos`, verifica si ya existe un gasto con la misma `tarjeta_id`, `fecha`, `monto` y `descripcion` creado en los últimos minutos (o agrega una columna opcional `webhook_event_id` única en `gastos` dentro de [`server/db/schema.ts`](../server/db/schema.ts)):
+     ```typescript
+     // Prevención de duplicados por reintento de webhook
+     const existente = await db
+       .select({ id: gastos.id })
+       .from(gastos)
+       .where(
+         and(
+           eq(gastos.tarjeta_id, tarjeta.id),
+           eq(gastos.fecha, compra.fecha),
+           eq(gastos.monto, compra.monto),
+           eq(gastos.descripcion, compra.comercio)
+         )
+       )
+       .limit(1)
+
+     if (existente.length > 0) {
+       return { ok: true, duplicate: true, gastoId: existente[0]?.id }
+     }
+     ```
+  2. De esta forma, si Hostinger reintenta el mismo evento, el servidor responde `200 OK` de forma idempotente sin duplicar el movimiento ni spamear notificaciones push.
