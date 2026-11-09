@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const icons = useAppConfig()
 
-const { openIncomeModal, formatCurrency, formatDate, triggerRefresh } = useFinanzas()
+const { openIncomeModal, openEditIncomeModal, formatCurrency, formatDate, triggerRefresh } = useFinanzas()
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
@@ -167,15 +167,26 @@ const deleteIngreso = async (id: number) => {
               <div class="space-y-1 text-xs text-muted">
                 <p>Depósito: {{ formatDate(ing.fecha) }}</p><p>Registrado: {{ formatDate(ing.fecha_registro.slice(0, 10)) }}</p>
               </div>
-              <UButton
-                :icon="icons.ui.icons.trash"
-                color="error"
-                variant="ghost"
-                aria-label="Eliminar ingreso"
-                :loading="deletingId === ing.id"
-                class="min-h-10 min-w-10 justify-center"
-                @click="deleteIngreso(ing.id)"
-              />
+              <div class="flex shrink-0 gap-1">
+                <UButton
+                  :icon="icons.ui.icons.edit"
+                  color="neutral"
+                  variant="ghost"
+                  label="Editar"
+                  aria-label="Editar nómina"
+                  class="min-h-10 justify-center"
+                  @click="openEditIncomeModal(ing)"
+                />
+                <UButton
+                  :icon="icons.ui.icons.trash"
+                  color="error"
+                  variant="ghost"
+                  aria-label="Eliminar ingreso"
+                  :loading="deletingId === ing.id"
+                  class="min-h-10 min-w-10 justify-center"
+                  @click="deleteIngreso(ing.id)"
+                />
+              </div>
             </div>
           </li>
         </ul>
@@ -219,6 +230,15 @@ const deleteIngreso = async (id: number) => {
                   +{{ formatCurrency(ing.monto) }}
                 </td>
                 <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <UButton
+                    aria-label="Editar nómina"
+                    label="Editar"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :icon="icons.ui.icons.edit"
+                    @click="openEditIncomeModal(ing)"
+                  />
                   <UButton
                     aria-label="Eliminar ingreso"
                     size="xs"

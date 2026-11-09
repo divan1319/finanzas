@@ -7,29 +7,36 @@ const props = defineProps<{
   fechaSugerida?: string
 }>()
 
-const { incomeModalOpen, closeIncomeModal, triggerRefresh } = useFinanzas()
+const { incomeModalOpen, incomeModalData, closeIncomeModal, triggerRefresh } = useFinanzas()
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
 const form = ref({
+  id: null as number | null,
   fecha: props.fechaSugerida || formatDateISO(new Date()),
   monto: '',
   descripcion: 'Nómina Quincenal / Mensual'
 })
 
 const loading = ref(false)
+const errorMessage = ref('')
+const isEditing = computed(() => form.value.id !== null)
 
 watch(incomeModalOpen, (open) => {
   if (open) {
+    errorMessage.value = ''
     form.value = {
-      fecha: props.fechaSugerida || formatDateISO(new Date()),
-      monto: '',
-      descripcion: 'Nómina'
+      id: incomeModalData.value?.id ?? null,
+      fecha: incomeModalData.value?.fecha || props.fechaSugerida || formatDateISO(new Date()),
+      monto: incomeModalData.value ? String(incomeModalData.value.monto) : '',
+      descripcion: incomeModalData.value?.descripcion ?? 'Nómina'
     }
   }
 })
 
 const submitIngreso = async () => {
+  if (loading.value) return
+  errorMessage.value = ''
   if (!form.value.fecha || !form.value.monto) {
     toast.add({
       title: 'Campos incompletos',
@@ -41,7 +48,7 @@ const submitIngreso = async () => {
   }
 
   const montoNum = Number(form.value.monto)
-  if (isNaN(montoNum) || montoNum <= 0) {
+  if (!Number.isFinite(montoNum) || montoNum <= 0) {
     toast.add({
       title: 'Monto inválido',
       description: 'El monto debe ser un número positivo.',
@@ -56,19 +63,21 @@ const submitIngreso = async () => {
     monto: montoNum,
     descripcion: form.value.descripcion
   }
+  const editing = isEditing.value
+  const action = {
+    tipo: editing ? 'ingreso_update' as const : 'ingreso_create' as const,
+    url: editing ? `/api/ingresos/${form.value.id}` : '/api/ingresos',
+    method: editing ? 'PUT' as const : 'POST' as const,
+    body: payload,
+    descripcion: `${editing ? 'Actualizar nómina' : 'Ingreso'}: ${payload.descripcion || 'Nómina'} ($${montoNum.toFixed(2)})`
+  }
 
   // Si estamos sin conexión, guardar directamente en la cola local
   if (!isOnline.value) {
-    enqueueAction({
-      tipo: 'ingreso_create',
-      url: '/api/ingresos',
-      method: 'POST',
-      body: payload,
-      descripcion: `Ingreso: ${form.value.descripcion || 'Nómina'} ($${montoNum.toFixed(2)})`
-    })
+    enqueueAction(action)
 
     toast.add({
-      title: 'Guardado sin conexión',
+      title: editing ? 'Cambios guardados sin conexión' : 'Guardado sin conexión',
       description: 'El ingreso se guardó localmente. Se sincronizará automáticamente al conectarte.',
       color: 'warning',
       icon: icons.appIcons.cloudOff
@@ -80,30 +89,34 @@ const submitIngreso = async () => {
 
   loading.value = true
   try {
-    await $fetch('/api/ingresos', {
-      method: 'POST',
+    await $fetch(action.url, {
+      method: action.method,
       body: payload
     })
 
     toast.add({
-      title: 'Ingreso registrado',
-      description: `Se registró el ingreso de nómina por $${montoNum.toFixed(2)}.`,
+      title: editing ? 'Nómina actualizada' : 'Ingreso registrado',
+      description: `${editing ? 'Se actualizó' : 'Se registró'} el ingreso de nómina por $${montoNum.toFixed(2)}.`,
       color: 'success',
       icon: icons.ui.icons.success
     })
 
     await triggerRefresh(['dashboard', 'ingresos', 'historial'])
     closeIncomeModal()
-  } catch (err: any) {
-    // Si falló por pérdida de conexión
-    if (!navigator.onLine || err?.name === 'FetchError' || err?.message?.includes('fetch')) {
-      enqueueAction({
-        tipo: 'ingreso_create',
-        url: '/api/ingresos',
-        method: 'POST',
-        body: payload,
-        descripcion: `Ingreso: ${form.value.descripcion || 'Nómina'} ($${montoNum.toFixed(2)})`
-      })
+  } catch (err: unknown) {
+    const error = err as {
+      statusCode?: number
+      status?: number
+      name?: string
+      message?: string
+      statusMessage?: string
+      response?: { status?: number }
+      data?: { statusMessage?: string, message?: string }
+    }
+    const status = error?.statusCode || error?.status || error?.response?.status
+    // HTTP validation/not-found errors must remain visible, never enter the offline queue.
+    if (!status && (!navigator.onLine || error?.name === 'FetchError' || error?.message?.includes('fetch'))) {
+      enqueueAction(action)
       toast.add({
         title: 'Guardado en modo offline',
         description: 'No se pudo conectar con el servidor. Se guardó localmente para sincronizar.',
@@ -112,9 +125,10 @@ const submitIngreso = async () => {
       })
       closeIncomeModal()
     } else {
+      errorMessage.value = error?.data?.statusMessage || error?.data?.message || error?.statusMessage || error?.message || 'No se pudo guardar la nómina.'
       toast.add({
-        title: 'Error al registrar ingreso',
-        description: err?.statusMessage || err?.message || 'Ocurrió un problema.',
+        title: editing ? 'Error al actualizar nómina' : 'Error al registrar ingreso',
+        description: errorMessage.value,
         color: 'error',
         icon: icons.ui.icons.error
       })
@@ -128,13 +142,21 @@ const submitIngreso = async () => {
 <template>
   <UModal
     v-model:open="incomeModalOpen"
-    title="Registrar Ingreso de Nómina"
+    :title="isEditing ? 'Editar nómina' : 'Registrar Ingreso de Nómina'"
   >
     <template #body>
       <form
         class="min-w-0 space-y-4"
         @submit.prevent="submitIngreso"
       >
+        <UAlert
+          v-if="errorMessage"
+          color="error"
+          variant="subtle"
+          :icon="icons.ui.icons.error"
+          :title="errorMessage"
+          role="alert"
+        />
         <UFormField
           label="Fecha del Depósito / Nómina"
           required
@@ -187,8 +209,8 @@ const submitIngreso = async () => {
             type="submit"
             color="primary"
             :loading="loading"
-            :icon="icons.ui.icons.plus"
-            label="Guardar Ingreso"
+            :icon="isEditing ? icons.appIcons.save : icons.ui.icons.plus"
+            :label="isEditing ? 'Guardar cambios' : 'Guardar Ingreso'"
           />
         </div>
       </form>

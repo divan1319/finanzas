@@ -1,6 +1,6 @@
 export interface OfflineAction {
   id: string
-  tipo: 'gasto_create' | 'gasto_update' | 'gasto_delete' | 'ingreso_create' | 'ingreso_delete'
+  tipo: 'gasto_create' | 'gasto_update' | 'gasto_delete' | 'ingreso_create' | 'ingreso_update' | 'ingreso_delete'
   url: string
   method: 'POST' | 'PUT' | 'DELETE'
   body?: any

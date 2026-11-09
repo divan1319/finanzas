@@ -1,3 +1,5 @@
+import type { IngresoEditable } from '#shared/types/ingreso'
+
 export const useFinanzas = () => {
   const toast = useToast()
 
@@ -7,6 +9,7 @@ export const useFinanzas = () => {
 
   // Estado del modal de ingreso
   const incomeModalOpen = useState('income_modal_open', () => false)
+  const incomeModalData = useState<IngresoEditable | null>('income_modal_data', () => null)
 
   // Estado del modal de presupuesto por período
   const budgetModalOpen = useState('budget_modal_open', () => false)
@@ -24,7 +27,7 @@ export const useFinanzas = () => {
     }
   }
 
-  const openNewExpenseModal = (prefill?: Partial<{ fecha: string; tarjeta_id: number; monto: number; descripcion: string; categoria: string }>) => {
+  const openNewExpenseModal = (prefill?: Partial<{ fecha: string, tarjeta_id: number, monto: number, descripcion: string, categoria: string }>) => {
     expenseModalData.value = prefill || null
     expenseModalOpen.value = true
   }
@@ -40,14 +43,21 @@ export const useFinanzas = () => {
   }
 
   const openIncomeModal = () => {
+    incomeModalData.value = null
+    incomeModalOpen.value = true
+  }
+
+  const openEditIncomeModal = (ingreso: IngresoEditable) => {
+    incomeModalData.value = { ...ingreso }
     incomeModalOpen.value = true
   }
 
   const closeIncomeModal = () => {
     incomeModalOpen.value = false
+    incomeModalData.value = null
   }
 
-  const openBudgetModal = (periodoData: { inicio: string; fin: string; etiqueta?: string; limite?: number; tienePresupuestoPersonalizado?: boolean }) => {
+  const openBudgetModal = (periodoData: { inicio: string, fin: string, etiqueta?: string, limite?: number, tienePresupuestoPersonalizado?: boolean }) => {
     budgetModalData.value = { ...periodoData }
     budgetModalOpen.value = true
   }
@@ -84,6 +94,7 @@ export const useFinanzas = () => {
     expenseModalOpen,
     expenseModalData,
     incomeModalOpen,
+    incomeModalData,
     budgetModalOpen,
     budgetModalData,
     refreshKey,
@@ -92,6 +103,7 @@ export const useFinanzas = () => {
     openEditExpenseModal,
     closeExpenseModal,
     openIncomeModal,
+    openEditIncomeModal,
     closeIncomeModal,
     openBudgetModal,
     closeBudgetModal,
