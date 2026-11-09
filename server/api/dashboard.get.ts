@@ -7,11 +7,13 @@ import {
   perteneceAlPeriodoNomina
 } from '#shared/utils/cicloFinanciero'
 import { and, gte, lte, desc, eq } from 'drizzle-orm'
+import { calcularResumenDiario } from '#shared/utils/presupuestoDiario'
+import { fechaElSalvador } from '#shared/utils/fechaElSalvador'
 
 export default defineEventHandler(async (event) => {
   await initDatabase()
   const query = getQuery(event)
-  const fechaConsulta = (query.fecha as string) || new Date().toISOString().slice(0, 10)
+  const fechaConsulta = (query.fecha as string) || fechaElSalvador()
 
   // 1. Obtener configuración
   const configList = await db.select().from(configuracion)
@@ -142,6 +144,12 @@ export default defineEventHandler(async (event) => {
       proximoCambio: sugerencia.proximoCambio
     },
     periodo,
+    resumenDiario: calcularResumenDiario({
+      limite,
+      gastosPeriodo,
+      fechaConsulta,
+      diasRestantes: periodo.diasRestantes
+    }),
     desgloseTarjetas,
     resumenGasto: {
       limite,

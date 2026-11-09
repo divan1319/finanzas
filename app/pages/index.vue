@@ -7,6 +7,8 @@ const { data: dashboard, pending, refresh } = useCachedFetch('/api/dashboard', {
   key: 'dashboard'
 })
 
+useDailyRefresh(() => dashboard.value?.fechaConsulta, refresh)
+
 const deletingId = ref<number | null>(null)
 const deleteGasto = async (id: number) => {
   if (!confirm('¿Estás seguro de eliminar este gasto?')) return
@@ -81,6 +83,7 @@ const deleteGasto = async (id: number) => {
         <PeriodProgressBar
           :periodo="dashboard.periodo"
           :resumen-gasto="dashboard.resumenGasto"
+          :resumen-diario="dashboard.resumenDiario"
         />
 
         <SavingsCard

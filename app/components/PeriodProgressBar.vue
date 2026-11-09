@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ResumenDiario } from '#shared/utils/presupuestoDiario'
+
 const props = defineProps<{
   periodo: {
     inicio: string
@@ -14,7 +16,9 @@ const props = defineProps<{
     restante: number
     porcentajeLimite: number
     excedido: boolean
+    tienePresupuestoPersonalizado?: boolean
   }
+  resumenDiario?: ResumenDiario
 }>()
 
 const { formatCurrency, openBudgetModal } = useFinanzas()
@@ -25,11 +29,6 @@ const progressColor = computed(() => {
   return 'success'
 })
 
-const presupuestoDiarioRestante = computed(() => {
-  if (!props.periodo?.diasRestantes || props.periodo.diasRestantes <= 0) return 0
-  return Math.max(0, props.resumenGasto.restante / props.periodo.diasRestantes)
-})
-
 const handleEditBudget = () => {
   if (!props.periodo) return
   openBudgetModal({
@@ -37,7 +36,7 @@ const handleEditBudget = () => {
     fin: props.periodo.fin,
     etiqueta: props.periodo.etiqueta,
     limite: props.resumenGasto.limite,
-    tienePresupuestoPersonalizado: (props.resumenGasto as any).tienePresupuestoPersonalizado
+    tienePresupuestoPersonalizado: props.resumenGasto.tienePresupuestoPersonalizado
   })
 }
 </script>
@@ -117,10 +116,29 @@ const handleEditBudget = () => {
       </div>
 
       <div>
-        <span class="text-muted block">Presupuesto sugerido/día</span>
-        <span class="font-bold text-sm text-foreground">
-          {{ formatCurrency(presupuestoDiarioRestante) }} / día
-        </span>
+        <span class="text-muted block">Disponible hoy</span>
+        <template v-if="props.resumenDiario">
+          <span
+            class="font-bold text-sm block"
+            :class="props.resumenDiario.excesoHoy > 0 ? 'text-red-500' : 'text-foreground'"
+          >
+            {{ formatCurrency(props.resumenDiario.disponibleHoy) }}
+          </span>
+          <span
+            v-if="props.resumenDiario.excesoHoy > 0"
+            class="text-red-500 block"
+          >
+            Excedido hoy por {{ formatCurrency(props.resumenDiario.excesoHoy) }}
+          </span>
+          <span class="text-muted block mt-1">
+            Presupuesto: {{ formatCurrency(props.resumenDiario.presupuestoHoy) }}
+          </span>
+          <span class="text-muted block">Gastado hoy: {{ formatCurrency(props.resumenDiario.gastadoHoy) }}</span>
+        </template>
+        <span
+          v-else
+          class="font-bold text-sm text-muted"
+        >—</span>
       </div>
 
       <div class="col-span-2 sm:col-span-1">
