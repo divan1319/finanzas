@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const icons = useAppConfig()
+
 const { budgetModalOpen, budgetModalData, closeBudgetModal, formatCurrency, triggerRefresh } = useFinanzas()
 const toast = useToast()
 
@@ -48,7 +50,7 @@ const submitBudget = async () => {
       title: 'Presupuesto actualizado',
       description: `Se asignó un límite de ${formatCurrency(num)} para el período ${budgetModalData.value.etiqueta || ''}.`,
       color: 'success',
-      icon: 'i-lucide-check-circle'
+      icon: icons.ui.icons.success
     })
 
     await triggerRefresh(['dashboard', 'historial', 'gastos'])
@@ -66,16 +68,25 @@ const submitBudget = async () => {
 </script>
 
 <template>
-  <UModal v-model:open="budgetModalOpen" title="Presupuesto del Período">
+  <UModal
+    v-model:open="budgetModalOpen"
+    title="Presupuesto del Período"
+  >
     <template #body>
-      <form class="space-y-4" @submit.prevent="submitBudget">
+      <form
+        class="min-w-0 space-y-4"
+        @submit.prevent="submitBudget"
+      >
         <!-- Banner informativo del período -->
-        <div class="rounded-xl border border-primary/25 bg-primary/5 p-4 flex items-start gap-3">
+        <div class="rounded-md border border-primary/25 bg-primary/5 p-4 flex items-start gap-3">
           <div class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
-            <UIcon name="i-lucide-calendar-range" class="w-4 h-4" />
+            <UIcon
+              :name="icons.appIcons.calendarRange"
+              class="w-4 h-4"
+            />
           </div>
           <div class="text-xs space-y-1 min-w-0">
-            <span class="font-bold text-foreground block text-sm">
+            <span class="font-bold text-highlighted block text-sm">
               {{ budgetModalData?.etiqueta || 'Período seleccionado' }}
             </span>
             <p class="text-muted font-mono text-[11px]">
@@ -84,17 +95,17 @@ const submitBudget = async () => {
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-muted mb-1.5">
-            Límite de Gasto para este Período ($ USD)
-          </label>
+        <UFormField
+          label="Límite de Gasto para este Período ($ USD)"
+          required
+        >
           <UInput
             v-model="limiteInput"
             type="number"
             step="0.01"
             min="0"
             placeholder="0.00"
-            icon="i-lucide-dollar-sign"
+            :icon="icons.appIcons.dollarSign"
             class="w-full"
             required
             autofocus
@@ -102,9 +113,9 @@ const submitBudget = async () => {
           <span class="text-[11px] text-muted mt-1.5 block leading-relaxed">
             Este presupuesto es exclusivo para este ciclo. No afectará a los otros meses del historial ni al límite global predeterminado.
           </span>
-        </div>
+        </UFormField>
 
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
           <UButton
             color="neutral"
             variant="ghost"
@@ -114,7 +125,7 @@ const submitBudget = async () => {
           <UButton
             type="submit"
             color="primary"
-            icon="i-lucide-save"
+            :icon="icons.appIcons.save"
             label="Guardar Presupuesto"
             :loading="loading"
           />

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const icons = useAppConfig()
+
 definePageMeta({
   layout: false
 })
@@ -33,7 +35,7 @@ const handleLogin = async () => {
       title: '¡Bienvenido!',
       description: 'Acceso autorizado al panel financiero.',
       color: 'success',
-      icon: 'i-lucide-shield-check'
+      icon: icons.appIcons.shieldCheck
     })
 
     await navigateTo('/')
@@ -46,87 +48,72 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-primary-500 selection:text-white">
-    <!-- Ambient Background Lighting -->
-    <div class="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-    <div class="w-full max-w-md relative z-10">
-      <!-- Header Branding -->
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 via-slate-800 to-indigo-500/20 border border-slate-700/60 shadow-xl shadow-emerald-500/5 mb-4 group">
-          <UIcon name="i-lucide-wallet" class="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform duration-300" />
-        </div>
-        <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Finanzas Personales
-        </h1>
-        <p class="text-xs sm:text-sm text-slate-400 mt-1.5 font-medium">
-          Acceso privado al control de nóminas y tarjetas
-        </p>
+  <main class="flex min-h-screen items-center justify-center bg-default px-4 py-10">
+    <div class="w-full max-w-sm space-y-5">
+      <div class="flex items-center justify-between">
+        <span class="flex items-center gap-2 text-sm font-semibold text-highlighted"><UIcon
+          :name="icons.appIcons.creditCard"
+          class="size-5 text-primary"
+        />Control Tarjetas</span>
+        <UColorModeButton />
       </div>
-
-      <!-- Login Card -->
-      <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50">
-        <form @submit.prevent="handleLogin" class="space-y-5">
-          <!-- Password Input -->
-          <div class="space-y-2">
-            <label for="password" class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Contraseña de Acceso
-            </label>
-            <div class="relative">
-              <UInput
-                id="password"
-                v-model="password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="Ingresa tu clave maestra o PIN"
-                icon="i-lucide-lock"
-                size="xl"
-                class="w-full font-mono text-sm"
-                autofocus
-                :disabled="loading"
-              />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors p-1"
-                tabindex="-1"
-              >
-                <UIcon :name="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Error Alert -->
-          <div
-            v-if="errorMessage"
-            class="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-2.5 text-xs text-red-400 animate-shake"
+      <UCard :ui="{ body: 'p-5 sm:p-6' }">
+        <h1 class="text-xl font-semibold tracking-tight text-highlighted">
+          Finanzas personales
+        </h1>
+        <p class="mt-1 text-sm text-muted">
+          Accede a tu presupuesto, nómina y tarjetas.
+        </p>
+        <form
+          class="mt-6 space-y-4"
+          @submit.prevent="handleLogin"
+        >
+          <UFormField
+            label="Contraseña de acceso"
+            name="password"
+            :error="errorMessage || undefined"
+            required
           >
-            <UIcon name="i-lucide-alert-circle" class="w-4 h-4 shrink-0 text-red-400" />
-            <span>{{ errorMessage }}</span>
-          </div>
-
-          <!-- Submit Button -->
+            <UInput
+              id="password"
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              :icon="icons.appIcons.lock"
+              placeholder="Ingresa tu contraseña"
+              class="w-full"
+              autocomplete="current-password"
+              :disabled="loading"
+              required
+              autofocus
+            >
+              <template #trailing>
+                <UButton
+                  :icon="showPassword ? icons.ui.icons.eyeOff : icons.ui.icons.eye"
+                  color="neutral"
+                  variant="link"
+                  size="sm"
+                  :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  :aria-pressed="showPassword"
+                  @click="showPassword = !showPassword"
+                />
+              </template>
+            </UInput>
+          </UFormField>
           <UButton
             type="submit"
-            color="primary"
-            size="xl"
-            block
+            label="Entrar"
+            :icon="icons.ui.icons.arrowRight"
             :loading="loading"
-            class="font-semibold shadow-lg shadow-primary-500/20"
-          >
-            <UIcon name="i-lucide-arrow-right" class="w-4 h-4 ml-1" />
-            <span>Desbloquear App</span>
-          </UButton>
+            block
+          />
         </form>
-
-        <div class="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-          <span class="flex items-center gap-1.5">
-            <UIcon name="i-lucide-shield-check" class="w-3.5 h-3.5 text-emerald-400" />
-            Sesión segura de 60 días
-          </span>
-          <span class="text-slate-400">PWA Protegida</span>
-        </div>
-      </div>
+        <p class="mt-5 flex items-center gap-1.5 border-t border-default pt-4 text-xs text-muted">
+          <UIcon
+            :name="icons.appIcons.shieldCheck"
+            class="size-4"
+          />Sesión segura de 60 días
+        </p>
+      </UCard>
     </div>
-  </div>
+  </main>
 </template>

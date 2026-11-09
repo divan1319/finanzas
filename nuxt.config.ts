@@ -7,6 +7,50 @@ export default defineNuxtConfig({
     'nuxt-auth-utils'
   ],
 
+  devtools: {
+    enabled: true
+  },
+
+  css: ['~/assets/css/main.css'],
+
+  runtimeConfig: {
+    appPassword: process.env.APP_PASSWORD || 'admin123',
+    session: {
+      password: process.env.NUXT_SESSION_PASSWORD || 'finanzas-super-secret-session-key-32-chars-long-abc'
+    },
+    tursoDatabaseUrl: process.env.TURSO_DATABASE_URL || '',
+    tursoAuthToken: process.env.TURSO_AUTH_TOKEN || '',
+    hostingerWebhookEmailKey: process.env.HOSTINGER_WEBHOOK_EMAIL_KEY || '',
+    // Web Push (VAPID). Generar con: pnpm exec web-push generate-vapid-keys
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+    vapidSubject: process.env.VAPID_SUBJECT || '',
+    public: {
+      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || ''
+    }
+  },
+
+  compatibilityDate: '2026-06-30',
+
+  eslint: {
+    config: {
+      stylistic: {
+        commaDangle: 'never',
+        braceStyle: '1tbs'
+      }
+    }
+  },
+
+  fonts: {
+    families: [{ name: 'Inter', provider: 'google', weights: [400, 500, 600, 700, 800, 900] }]
+  },
+
+  icon: {
+    clientBundle: {
+      scan: { globInclude: ['app/**/*.{vue,ts}'] },
+      includeCustomCollections: true
+    }
+  },
+
   pwa: {
     manifest: {
       name: 'Finanzas Personales',
@@ -66,39 +110,6 @@ export default defineNuxtConfig({
     },
     devOptions: {
       enabled: false
-    }
-  },
-
-  devtools: {
-    enabled: true
-  },
-
-  css: ['~/assets/css/main.css'],
-
-  runtimeConfig: {
-    appPassword: process.env.APP_PASSWORD || 'admin123',
-    session: {
-      password: process.env.NUXT_SESSION_PASSWORD || 'finanzas-super-secret-session-key-32-chars-long-abc'
-    },
-    tursoDatabaseUrl: process.env.TURSO_DATABASE_URL || '',
-    tursoAuthToken: process.env.TURSO_AUTH_TOKEN || '',
-    hostingerWebhookEmailKey: process.env.HOSTINGER_WEBHOOK_EMAIL_KEY || '',
-    // Web Push (VAPID). Generar con: pnpm exec web-push generate-vapid-keys
-    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
-    vapidSubject: process.env.VAPID_SUBJECT || '',
-    public: {
-      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || ''
-    }
-  },
-
-  compatibilityDate: '2026-06-30',
-
-  eslint: {
-    config: {
-      stylistic: {
-        commaDangle: 'never',
-        braceStyle: '1tbs'
-      }
     }
   }
 })

@@ -51,121 +51,58 @@ const tarjetas = computed(() => {
     }
   ]
 })
-
-const getBarColorClass = (color?: string) => {
-  switch (color) {
-    case 'indigo': return 'bg-indigo-500'
-    case 'amber': return 'bg-amber-500'
-    case 'violet':
-    case 'purple': return 'bg-violet-500'
-    case 'rose':
-    case 'red': return 'bg-rose-500'
-    case 'sky':
-    case 'cyan':
-    case 'blue': return 'bg-sky-500'
-    default: return 'bg-emerald-500'
-  }
-}
-
-const getCardStyle = (color?: string) => {
-  switch (color) {
-    case 'indigo':
-      return {
-        container: 'border-indigo-500/20 bg-indigo-500/5',
-        title: 'text-indigo-400',
-        dot: 'bg-indigo-500'
-      }
-    case 'amber':
-      return {
-        container: 'border-amber-500/20 bg-amber-500/5',
-        title: 'text-amber-400',
-        dot: 'bg-amber-500'
-      }
-    case 'violet':
-    case 'purple':
-      return {
-        container: 'border-violet-500/20 bg-violet-500/5',
-        title: 'text-violet-400',
-        dot: 'bg-violet-500'
-      }
-    case 'rose':
-    case 'red':
-      return {
-        container: 'border-rose-500/20 bg-rose-500/5',
-        title: 'text-rose-400',
-        dot: 'bg-rose-500'
-      }
-    case 'sky':
-    case 'cyan':
-    case 'blue':
-      return {
-        container: 'border-sky-500/20 bg-sky-500/5',
-        title: 'text-sky-400',
-        dot: 'bg-sky-500'
-      }
-    default:
-      return {
-        container: 'border-emerald-500/20 bg-emerald-500/5',
-        title: 'text-emerald-400',
-        dot: 'bg-emerald-500'
-      }
-  }
-}
 </script>
 
 <template>
-  <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-          <UIcon name="i-lucide-credit-card" class="w-5 h-5" />
-        </div>
-        <h3 class="font-bold text-foreground">Gasto por Tarjeta en el Período</h3>
-      </div>
-      <span class="text-xs text-muted">
-        Total: {{ formatCurrency(props.resumenGasto.totalGastado) }}
-      </span>
+  <UCard
+    :ui="{ body: 'p-4 sm:p-5 space-y-4' }"
+    class="h-full"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-sm font-semibold text-highlighted">
+        Gasto por tarjeta
+      </h2>
+      <span class="text-xs text-muted">{{ formatCurrency(resumenGasto.totalGastado) }} en total</span>
     </div>
-
-    <!-- Barra combinada proporcional multi-tarjeta -->
-    <div class="space-y-2">
-      <div class="w-full bg-muted/20 rounded-full h-3 overflow-hidden flex">
-        <div
-          v-for="t in tarjetas"
-          :key="t.id"
-          class="h-full transition-all duration-500"
-          :class="getBarColorClass(t.color)"
-          :style="{ width: `${t.porcentaje}%` }"
-          :title="`${t.nombre}: ${t.porcentaje}%`"
-        />
-      </div>
-    </div>
-
-    <!-- Tarjetas comparativas dinámicas -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+    <div
+      v-if="resumenGasto.totalGastado > 0"
+      class="flex h-2 overflow-hidden rounded-full bg-accented"
+      role="img"
+      aria-label="Distribución de gastos por tarjeta"
+    >
       <div
         v-for="t in tarjetas"
         :key="t.id"
-        class="p-3.5 rounded-xl border space-y-1 transition-all"
-        :class="getCardStyle(t.color).container"
+        :class="cardColorClass(t.color)"
+        :style="{ width: `${t.porcentaje}%` }"
+        :title="`${t.nombre}: ${t.porcentaje}%`"
+      />
+    </div>
+    <div class="divide-y divide-default">
+      <div
+        v-for="t in tarjetas"
+        :key="t.id"
+        class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
       >
-        <div class="flex items-center justify-between gap-2">
-          <span class="font-bold text-xs flex items-center gap-1.5 truncate" :class="getCardStyle(t.color).title">
-            <span class="w-2 h-2 rounded-full shrink-0" :class="getCardStyle(t.color).dot" />
-            <span class="truncate">{{ t.nombre }}</span>
-            <UIcon v-if="t.es_principal" name="i-lucide-star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" title="Tarjeta Principal" />
-          </span>
-          <span class="text-[11px] text-muted shrink-0">{{ t.porcentaje }}%</span>
+        <div class="min-w-0">
+          <CardIdentifier
+            :name="t.nombre"
+            :color="t.color"
+            class="text-sm font-medium"
+          />
+          <p class="mt-1 text-xs text-muted">
+            Corte {{ t.dia_corte }} · {{ t.dia_pago_propio_tipo === 'dia_siguiente_corte' ? 'Pago después del corte' : 'Pago en nómina' }}
+          </p>
         </div>
-        <div class="text-lg font-extrabold text-foreground">
-          {{ formatCurrency(t.total) }}
+        <div class="shrink-0 text-right">
+          <p class="text-sm font-semibold tabular-nums text-highlighted">
+            {{ formatCurrency(t.total) }}
+          </p>
+          <p class="text-xs text-muted">
+            {{ t.porcentaje }}%
+          </p>
         </div>
-        <span class="text-[11px] text-muted block truncate">
-          <template v-if="t.dia_corte">Corte día {{ t.dia_corte }}</template>
-          <template v-if="t.dia_pago_propio_tipo === 'dia_siguiente_corte'"> • Paga corte + 1</template>
-          <template v-else-if="t.dia_pago_propio_tipo === 'dia_nomina'"> • Paga en Nómina</template>
-        </span>
       </div>
     </div>
-  </div>
+  </UCard>
 </template>

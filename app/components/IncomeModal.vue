@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { formatDateISO } from '#shared/utils/cicloFinanciero'
 
+const icons = useAppConfig()
+
 const props = defineProps<{
   fechaSugerida?: string
 }>()
@@ -33,7 +35,7 @@ const submitIngreso = async () => {
       title: 'Campos incompletos',
       description: 'Por favor indica la fecha y el monto de nómina.',
       color: 'warning',
-      icon: 'i-lucide-alert-triangle'
+      icon: icons.ui.icons.warning
     })
     return
   }
@@ -44,7 +46,7 @@ const submitIngreso = async () => {
       title: 'Monto inválido',
       description: 'El monto debe ser un número positivo.',
       color: 'error',
-      icon: 'i-lucide-x-circle'
+      icon: icons.ui.icons.error
     })
     return
   }
@@ -69,7 +71,7 @@ const submitIngreso = async () => {
       title: 'Guardado sin conexión',
       description: 'El ingreso se guardó localmente. Se sincronizará automáticamente al conectarte.',
       color: 'warning',
-      icon: 'i-lucide-cloud-off'
+      icon: icons.appIcons.cloudOff
     })
 
     closeIncomeModal()
@@ -87,7 +89,7 @@ const submitIngreso = async () => {
       title: 'Ingreso registrado',
       description: `Se registró el ingreso de nómina por $${montoNum.toFixed(2)}.`,
       color: 'success',
-      icon: 'i-lucide-check-circle'
+      icon: icons.ui.icons.success
     })
 
     await triggerRefresh(['dashboard', 'ingresos', 'historial'])
@@ -106,7 +108,7 @@ const submitIngreso = async () => {
         title: 'Guardado en modo offline',
         description: 'No se pudo conectar con el servidor. Se guardó localmente para sincronizar.',
         color: 'warning',
-        icon: 'i-lucide-cloud-off'
+        icon: icons.appIcons.cloudOff
       })
       closeIncomeModal()
     } else {
@@ -114,7 +116,7 @@ const submitIngreso = async () => {
         title: 'Error al registrar ingreso',
         description: err?.statusMessage || err?.message || 'Ocurrió un problema.',
         color: 'error',
-        icon: 'i-lucide-x-circle'
+        icon: icons.ui.icons.error
       })
     }
   } finally {
@@ -124,48 +126,57 @@ const submitIngreso = async () => {
 </script>
 
 <template>
-  <UModal v-model:open="incomeModalOpen" title="Registrar Ingreso de Nómina">
+  <UModal
+    v-model:open="incomeModalOpen"
+    title="Registrar Ingreso de Nómina"
+  >
     <template #body>
-      <form class="space-y-4" @submit.prevent="submitIngreso">
-        <div>
-          <label class="block text-sm font-medium text-muted mb-1">Fecha del Depósito / Nómina</label>
+      <form
+        class="min-w-0 space-y-4"
+        @submit.prevent="submitIngreso"
+      >
+        <UFormField
+          label="Fecha del Depósito / Nómina"
+          required
+        >
           <UInput
             v-model="form.fecha"
             type="date"
             class="w-full"
-            icon="i-lucide-calendar"
+            :icon="icons.appIcons.calendar"
             required
           />
           <p class="text-xs text-muted mt-1">
             Se asociará al período de nómina correspondiente a esta fecha.
           </p>
-        </div>
+        </UFormField>
 
-        <div>
-          <label class="block text-sm font-medium text-muted mb-1">Monto Percibido ($ USD)</label>
+        <UFormField
+          label="Monto Percibido ($ USD)"
+          required
+        >
           <UInput
             v-model="form.monto"
             type="number"
             step="0.01"
             min="0.01"
             placeholder="Ej. 2500.00"
-            icon="i-lucide-banknote"
+            :icon="icons.appIcons.banknote"
             class="w-full"
             required
           />
-        </div>
+        </UFormField>
 
-        <div>
-          <label class="block text-sm font-medium text-muted mb-1">Descripción / Concepto</label>
+        <UFormField label="Descripción / Concepto">
           <UInput
             v-model="form.descripcion"
             placeholder="Ej. Nómina Agosto, Quincena..."
-            icon="i-lucide-file-text"
+            :icon="icons.appIcons.fileText"
             class="w-full"
           />
-        </div>
+        </UFormField>
 
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
           <UButton
             color="neutral"
             variant="ghost"
@@ -176,7 +187,7 @@ const submitIngreso = async () => {
             type="submit"
             color="primary"
             :loading="loading"
-            icon="i-lucide-plus-circle"
+            :icon="icons.ui.icons.plus"
             label="Guardar Ingreso"
           />
         </div>

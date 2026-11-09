@@ -12,6 +12,7 @@ const STORAGE_QUEUE_KEY = 'finanzas_offline_queue'
 const STORAGE_CONFIG_CACHE_KEY = 'finanzas_cached_config'
 
 export const useOfflineSync = () => {
+  const icons = useAppConfig()
   const toast = useToast()
 
   const isOnline = useState<boolean>('offline_sync_is_online', () => true)
@@ -89,7 +90,7 @@ export const useOfflineSync = () => {
         title: 'Sin conexión',
         description: 'No hay conexión a internet para sincronizar en este momento.',
         color: 'warning',
-        icon: 'i-lucide-wifi-off'
+        icon: icons.appIcons.wifiOff
       })
       return
     }
@@ -124,7 +125,7 @@ export const useOfflineSync = () => {
           title: 'Sincronización completa',
           description: `Se sincronizaron ${syncedCount} registro(s) pendiente(s) con éxito.`,
           color: 'success',
-          icon: 'i-lucide-cloud-check'
+          icon: icons.appIcons.cloudCheck
         })
       }
 
@@ -133,7 +134,7 @@ export const useOfflineSync = () => {
           title: 'Sincronización parcial',
           description: `${errorCount} registro(s) no pudieron enviarse. Se reintentará luego.`,
           color: 'warning',
-          icon: 'i-lucide-alert-triangle'
+          icon: icons.ui.icons.warning
         })
       }
     } catch (e: any) {
@@ -159,7 +160,7 @@ export const useOfflineSync = () => {
           ? `Iniciando sincronización de ${pendingQueue.value.length} registro(s)...`
           : 'Conectado a internet.',
         color: 'info',
-        icon: 'i-lucide-wifi'
+        icon: icons.appIcons.wifi
       })
       if (pendingQueue.value.length > 0) {
         syncNow()
@@ -172,7 +173,7 @@ export const useOfflineSync = () => {
         title: 'Modo sin conexión',
         description: 'Puedes seguir registrando gastos e ingresos. Se guardarán en tu dispositivo.',
         color: 'warning',
-        icon: 'i-lucide-wifi-off'
+        icon: icons.appIcons.wifiOff
       })
     })
 

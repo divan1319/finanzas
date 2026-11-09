@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ResumenDiario } from '#shared/utils/presupuestoDiario'
 
+const icons = useAppConfig()
+
 const props = defineProps<{
   periodo: {
     inicio: string
@@ -42,111 +44,46 @@ const handleEditBudget = () => {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-5">
-    <!-- Encabezado de período -->
-    <div class="flex items-center justify-between flex-wrap gap-2">
+  <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
+    <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
-        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Período de Nómina Actual</span>
-        <h3 class="text-lg font-bold text-foreground">{{ props.periodo?.etiqueta }}</h3>
+        <h2 class="text-sm font-semibold text-highlighted">
+          Presupuesto del ciclo
+        </h2>
+        <p class="mt-1 text-xs text-muted">
+          {{ periodo.etiqueta }} · Día {{ periodo.diasTranscurridos }} de {{ periodo.diasTotales }}
+        </p>
       </div>
-      <div class="flex items-center gap-2">
-        <UBadge color="neutral" variant="subtle" size="md">
-          <UIcon name="i-lucide-clock" class="w-3.5 h-3.5 mr-1" />
-          {{ props.periodo?.diasRestantes }} {{ props.periodo?.diasRestantes === 1 ? 'día restante' : 'días restantes' }}
-        </UBadge>
-        <UBadge
-          :color="progressColor"
-          variant="subtle"
-          size="md"
-        >
-          {{ props.resumenGasto.porcentajeLimite }}% del límite
-        </UBadge>
-      </div>
+      <UButton
+        color="neutral"
+        variant="outline"
+        size="sm"
+        :icon="icons.ui.icons.edit"
+        :label="formatCurrency(resumenGasto.limite)"
+        aria-label="Editar presupuesto del ciclo"
+        @click="handleEditBudget"
+      />
     </div>
-
-    <!-- Barra de Progreso de Gasto -->
-    <div class="space-y-2">
-      <div class="flex items-baseline justify-between">
-        <div>
-          <span class="text-2xl font-extrabold text-foreground tracking-tight">
-            {{ formatCurrency(props.resumenGasto.totalGastado) }}
-          </span>
-          <span class="text-xs text-muted ml-1">gastados</span>
-        </div>
-        <div class="text-right">
-          <span class="text-xs text-muted block">Presupuesto del ciclo</span>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 text-sm font-bold text-foreground hover:text-primary transition-colors cursor-pointer group"
-            title="Clic para editar el presupuesto de este período"
-            @click="handleEditBudget"
-          >
-            <span>{{ formatCurrency(props.resumenGasto.limite) }}</span>
-            <UIcon name="i-lucide-pencil" class="w-3.5 h-3.5 text-muted group-hover:text-primary transition-colors" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Barra personalizada estilizada -->
-      <div class="w-full bg-muted/20 rounded-full h-3.5 overflow-hidden p-0.5">
-        <div
-          class="h-full rounded-full transition-all duration-500 ease-out"
-          :class="[
-            progressColor === 'error'
-              ? 'bg-gradient-to-r from-red-500 to-rose-600'
-              : progressColor === 'warning'
-                ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-                : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-          ]"
-          :style="{ width: `${Math.min(100, props.resumenGasto.porcentajeLimite)}%` }"
-        />
-      </div>
+    <div class="flex flex-wrap justify-between gap-2 text-sm">
+      <span><strong class="font-semibold text-highlighted">{{ formatCurrency(resumenGasto.totalGastado) }}</strong> <span class="text-muted">gastados</span></span>
+      <span class="text-muted">{{ resumenGasto.porcentajeLimite }}% del presupuesto</span>
     </div>
-
-    <!-- Métricas inferiores -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-muted/15 text-xs">
-      <div>
-        <span class="text-muted block">Disponible para gastar</span>
-        <span
-          class="font-bold text-sm"
-          :class="props.resumenGasto.excedido ? 'text-red-500' : 'text-foreground'"
-        >
-          {{ props.resumenGasto.excedido ? 'Límite superado por ' + formatCurrency(props.resumenGasto.totalGastado - props.resumenGasto.limite) : formatCurrency(props.resumenGasto.restante) }}
-        </span>
-      </div>
-
-      <div>
-        <span class="text-muted block">Disponible hoy</span>
-        <template v-if="props.resumenDiario">
-          <span
-            class="font-bold text-sm block"
-            :class="props.resumenDiario.excesoHoy > 0 ? 'text-red-500' : 'text-foreground'"
-          >
-            {{ formatCurrency(props.resumenDiario.disponibleHoy) }}
-          </span>
-          <span
-            v-if="props.resumenDiario.excesoHoy > 0"
-            class="text-red-500 block"
-          >
-            Excedido hoy por {{ formatCurrency(props.resumenDiario.excesoHoy) }}
-          </span>
-          <span class="text-muted block mt-1">
-            Presupuesto: {{ formatCurrency(props.resumenDiario.presupuestoHoy) }}
-          </span>
-          <span class="text-muted block">Gastado hoy: {{ formatCurrency(props.resumenDiario.gastadoHoy) }}</span>
-        </template>
-        <span
-          v-else
-          class="font-bold text-sm text-muted"
-        >—</span>
-      </div>
-
-      <div class="col-span-2 sm:col-span-1">
-        <span class="text-muted block">Progreso del ciclo</span>
-        <span class="font-bold text-sm text-foreground">
-          Día {{ props.periodo?.diasTranscurridos }} de {{ props.periodo?.diasTotales }}
-        </span>
-      </div>
-    </div>
-  </div>
+    <UProgress
+      :model-value="Math.min(100, resumenGasto.porcentajeLimite)"
+      :color="progressColor"
+      aria-label="Porcentaje utilizado del presupuesto"
+    />
+    <p
+      v-if="resumenGasto.excedido"
+      class="text-xs text-error"
+    >
+      Límite superado por {{ formatCurrency(resumenGasto.totalGastado - resumenGasto.limite) }}
+    </p>
+    <p
+      v-else
+      class="text-xs text-muted"
+    >
+      {{ periodo.diasRestantes }} {{ periodo.diasRestantes === 1 ? 'día después de hoy' : 'días después de hoy' }} para terminar el ciclo.
+    </p>
+  </UCard>
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const icons = useAppConfig()
+
 const { triggerRefresh } = useFinanzas()
 const toast = useToast()
 
@@ -35,7 +37,7 @@ const guardarReglasGlobales = async () => {
       title: 'Configuración guardada',
       description: 'Los parámetros de nómina y presupuesto se han actualizado.',
       color: 'success',
-      icon: 'i-lucide-check'
+      icon: icons.ui.icons.check
     })
 
     triggerRefresh()
@@ -53,43 +55,13 @@ const guardarReglasGlobales = async () => {
 
 // Colores disponibles para tarjetas
 const colorOptions = [
-  { value: 'emerald', label: 'Esmeralda', bgClass: 'bg-emerald-500', textClass: 'text-emerald-400', borderClass: 'border-emerald-500/30' },
-  { value: 'indigo', label: 'Índigo', bgClass: 'bg-indigo-500', textClass: 'text-indigo-400', borderClass: 'border-indigo-500/30' },
-  { value: 'amber', label: 'Ámbar / Dorado', bgClass: 'bg-amber-500', textClass: 'text-amber-400', borderClass: 'border-amber-500/30' },
-  { value: 'violet', label: 'Violeta / Púrpura', bgClass: 'bg-violet-500', textClass: 'text-violet-400', borderClass: 'border-violet-500/30' },
-  { value: 'rose', label: 'Rosa / Carmín', bgClass: 'bg-rose-500', textClass: 'text-rose-400', borderClass: 'border-rose-500/30' },
-  { value: 'sky', label: 'Azul Cielo', bgClass: 'bg-sky-500', textClass: 'text-sky-400', borderClass: 'border-sky-500/30' }
+  { value: 'emerald', label: 'Esmeralda', bgClass: cardColorClass('emerald') },
+  { value: 'indigo', label: 'Índigo', bgClass: cardColorClass('indigo') },
+  { value: 'amber', label: 'Ámbar / Dorado', bgClass: cardColorClass('amber') },
+  { value: 'violet', label: 'Violeta / Púrpura', bgClass: cardColorClass('violet') },
+  { value: 'rose', label: 'Rosa / Carmín', bgClass: cardColorClass('rose') },
+  { value: 'sky', label: 'Azul Cielo', bgClass: cardColorClass('sky') }
 ]
-
-const getCardBorderClass = (color?: string | null) => {
-  switch (color) {
-    case 'indigo': return 'border-indigo-500/25 bg-indigo-500/5'
-    case 'amber': return 'border-amber-500/25 bg-amber-500/5'
-    case 'violet':
-    case 'purple': return 'border-violet-500/25 bg-violet-500/5'
-    case 'rose':
-    case 'red': return 'border-rose-500/25 bg-rose-500/5'
-    case 'sky':
-    case 'cyan':
-    case 'blue': return 'border-sky-500/25 bg-sky-500/5'
-    default: return 'border-emerald-500/25 bg-emerald-500/5'
-  }
-}
-
-const getCardDotClass = (color?: string | null) => {
-  switch (color) {
-    case 'indigo': return 'bg-indigo-500'
-    case 'amber': return 'bg-amber-500'
-    case 'violet':
-    case 'purple': return 'bg-violet-500'
-    case 'rose':
-    case 'red': return 'bg-rose-500'
-    case 'sky':
-    case 'cyan':
-    case 'blue': return 'bg-sky-500'
-    default: return 'bg-emerald-500'
-  }
-}
 
 // Modal Agregar Tarjeta
 const addCardModalOpen = ref(false)
@@ -134,7 +106,7 @@ const submitAddCard = async () => {
       body: {
         nombre: newCardForm.value.nombre.trim(),
         dia_corte: Number(newCardForm.value.dia_corte),
-        dia_vencimiento_pago: newCardForm.value.dia_vencimiento_pago ? Number(newCardForm.value.dia_vencimiento_pago) : null,
+        dia_vencimiento_pago: newCardForm.value.dia_vencimiento_pago ? Number(newCardForm.value.dia_vencimiento_pago) : undefined,
         dia_pago_propio_tipo: newCardForm.value.dia_pago_propio_tipo,
         es_principal: newCardForm.value.es_principal,
         color: newCardForm.value.color
@@ -145,7 +117,7 @@ const submitAddCard = async () => {
       title: 'Tarjeta Agregada',
       description: `Se creó "${newCardForm.value.nombre}" exitosamente.`,
       color: 'success',
-      icon: 'i-lucide-check-circle'
+      icon: icons.ui.icons.success
     })
 
     addCardModalOpen.value = false
@@ -219,7 +191,7 @@ const submitEditCard = async () => {
       title: 'Tarjeta Actualizada',
       description: `Los cambios para "${editCardForm.value.nombre}" fueron guardados.`,
       color: 'success',
-      icon: 'i-lucide-check-circle'
+      icon: icons.ui.icons.success
     })
 
     editCardModalOpen.value = false
@@ -253,7 +225,7 @@ const marcarComoPrincipal = async (card: any) => {
       title: 'Tarjeta Principal Actualizada',
       description: `"${card.nombre}" ahora es tu tarjeta principal de uso mensual.`,
       color: 'success',
-      icon: 'i-lucide-star'
+      icon: icons.ui.icons.star
     })
     triggerRefresh()
     refresh()
@@ -294,7 +266,7 @@ const confirmDeleteCard = async () => {
       title: 'Tarjeta Eliminada',
       description: `La tarjeta "${cardToDelete.value.nombre}" ha sido eliminada.`,
       color: 'success',
-      icon: 'i-lucide-trash'
+      icon: icons.ui.icons.trash
     })
 
     deleteModalOpen.value = false
@@ -344,7 +316,7 @@ const onActivarPush = async () => {
       title: 'Notificaciones activadas',
       description: 'Te avisaremos en este dispositivo cuando se registre un gasto desde tu correo.',
       color: 'success',
-      icon: 'i-lucide-bell-ring'
+      icon: icons.appIcons.bellRing
     })
   } catch (err: any) {
     toast.add({
@@ -362,7 +334,7 @@ const onDesactivarPush = async () => {
       title: 'Notificaciones desactivadas',
       description: 'Este dispositivo ya no recibirá avisos de nuevos gastos.',
       color: 'info',
-      icon: 'i-lucide-bell-off'
+      icon: icons.appIcons.bellOff
     })
   } catch (err: any) {
     toast.add({
@@ -382,7 +354,7 @@ const onProbarPush = async () => {
       title: 'Notificación enviada',
       description: 'Deberías verla en unos segundos.',
       color: 'success',
-      icon: 'i-lucide-send'
+      icon: icons.appIcons.send
     })
   } catch (err: any) {
     toast.add({
@@ -406,7 +378,7 @@ const resetData = async () => {
       title: 'Datos Eliminados',
       description: 'Todos los gastos, nóminas y reconciliaciones han sido borrados.',
       color: 'success',
-      icon: 'i-lucide-check-circle'
+      icon: icons.ui.icons.success
     })
     confirmResetModalOpen.value = false
     triggerRefresh()
@@ -430,7 +402,7 @@ const seedDemo = async () => {
       title: 'Datos Demo Cargados',
       description: 'Se han generado movimientos de prueba.',
       color: 'success',
-      icon: 'i-lucide-sparkles'
+      icon: icons.appIcons.sparkles
     })
     triggerRefresh()
     refresh()
@@ -447,328 +419,447 @@ const seedDemo = async () => {
 </script>
 
 <template>
-  <div class="space-y-6 max-w-4xl mx-auto">
+  <div class="space-y-4 min-w-0">
     <!-- Encabezado -->
-    <div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Configuración del Sistema</h1>
-      <p class="text-sm text-muted">Ajusta los parámetros de nómina, presupuesto mensual y gestiona tus tarjetas de crédito</p>
+    <div class="page-header">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-semibold tracking-tight">
+          Configuración del Sistema
+        </h1>
+        <p class="text-sm text-muted">
+          Ajusta tu presupuesto, tarjetas y preferencias.
+        </p>
+      </div>
     </div>
 
-    <!-- 1. Sección Presupuesto y Nómina -->
-    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <UIcon name="i-lucide-sliders" class="w-5 h-5" />
-          </div>
-          <div>
-            <h3 class="font-bold text-foreground">Reglas de Nómina y Presupuesto</h3>
-            <p class="text-xs text-muted">Afecta el cálculo de períodos y el límite de gasto mensual combinado</p>
-          </div>
-        </div>
-      </div>
-
-      <form class="space-y-4 pt-2" @submit.prevent="guardarReglasGlobales">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-medium text-muted mb-1">Día Objetivo de Nómina (Default 26)</label>
-            <UInput
-              v-model="formGlobal.dia_objetivo_nomina"
-              type="number"
-              min="1"
-              max="31"
-              class="w-full"
-              required
-            />
-            <span class="text-[11px] text-muted mt-1 block">
-              Si cae sábado se recorre al viernes 25; si cae domingo, al viernes 24.
-            </span>
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-muted mb-1">Presupuesto Base por Defecto ($ USD)</label>
-            <UInput
-              v-model="formGlobal.limite_gasto_periodo"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0.00"
-              class="w-full"
-              required
-            />
-            <span class="text-[11px] text-muted mt-1 block">
-              Presupuesto predeterminado para nuevos períodos. Puedes ajustar el presupuesto de cada período específico desde Historial o Inicio.
-            </span>
-          </div>
-        </div>
-
-        <div class="flex justify-end pt-2">
-          <UButton
-            type="submit"
-            size="md"
-            color="primary"
-            icon="i-lucide-save"
-            label="Guardar Reglas de Presupuesto"
-            :loading="savingGlobal"
-            class="font-semibold shadow-xs"
-          />
-        </div>
-      </form>
-    </div>
-
-    <!-- 2. Sección Tarjetas de Crédito Dinámicas -->
-    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <UIcon name="i-lucide-credit-card" class="w-5 h-5" />
-          </div>
-          <div>
-            <h3 class="font-bold text-foreground">Tarjetas de Crédito</h3>
-            <p class="text-xs text-muted">Personaliza nombres, días de corte, reglas de pago o agrega nuevas tarjetas</p>
-          </div>
-        </div>
-
-        <UButton
-          size="sm"
-          color="primary"
-          icon="i-lucide-plus"
-          label="Agregar Tarjeta"
-          class="font-semibold shadow-xs shrink-0 self-start sm:self-auto"
-          @click="openAddCardModal"
-        />
-      </div>
-
-      <!-- Estado de carga o sin tarjetas -->
-      <div v-if="pending" class="py-10 text-center text-muted text-xs">
-        <UIcon name="i-lucide-loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-        <span>Cargando tarjetas...</span>
-      </div>
-
-      <div v-else-if="!configData?.tarjetas || configData.tarjetas.length === 0" class="py-10 text-center text-muted space-y-3">
-        <UIcon name="i-lucide-credit-card" class="w-10 h-10 mx-auto opacity-30" />
-        <p class="text-xs">No tienes tarjetas registradas aún.</p>
-        <UButton size="sm" color="primary" icon="i-lucide-plus" label="Agregar Tarjeta" @click="openAddCardModal" />
-      </div>
-
-      <!-- Grid de Tarjetas -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div
-          v-for="t in configData.tarjetas"
-          :key="t.id"
-          class="rounded-xl border p-4.5 space-y-3 relative transition-all"
-          :class="[
-            getCardBorderClass(t.color),
-            t.es_principal ? 'ring-2 ring-primary/40' : ''
-          ]"
-        >
-          <!-- Encabezado de la Tarjeta -->
-          <div class="flex items-start justify-between gap-2">
-            <div class="space-y-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full shrink-0" :class="getCardDotClass(t.color)" />
-                <span class="font-bold text-base text-foreground truncate">{{ t.nombre }}</span>
+    <UTabs
+      :items="[{ label: 'Presupuesto y nómina', slot: 'budget' }, { label: 'Tarjetas', slot: 'cards' }, { label: 'Notificaciones', slot: 'notifications' }, { label: 'Datos', slot: 'data' }]"
+      :unmount-on-hide="false"
+      variant="link"
+      :ui="{ list: 'overflow-x-auto overflow-y-hidden flex-nowrap', trigger: 'shrink-0', content: 'pt-4' }"
+    >
+      <template #budget>
+        <!-- 1. Sección Presupuesto y Nómina -->
+        <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <UIcon
+                  :name="icons.appIcons.sliders"
+                  class="w-5 h-5"
+                />
               </div>
-              <div v-if="t.es_principal" class="pt-0.5">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30 shadow-xs">
-                  <UIcon name="i-lucide-star" class="w-3 h-3 fill-amber-500" />
-                  Tarjeta Principal (Uso Mensual)
+              <div>
+                <h3 class="font-bold text-highlighted">
+                  Reglas de nómina y presupuesto
+                </h3>
+                <p class="text-xs text-muted">
+                  Afecta el cálculo de períodos y el límite de gasto mensual combinado
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form
+            class="space-y-4 pt-2"
+            @submit.prevent="guardarReglasGlobales"
+          >
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <UFormField
+                label="Día Objetivo de Nómina (Default 26)"
+                required
+              >
+                <UInput
+                  v-model="formGlobal.dia_objetivo_nomina"
+                  type="number"
+                  min="1"
+                  max="31"
+                  class="w-full"
+                  required
+                />
+                <span class="text-[11px] text-muted mt-1 block">
+                  Si cae sábado se recorre al viernes 25; si cae domingo, al viernes 24.
                 </span>
+              </UFormField>
+
+              <UFormField
+                label="Presupuesto Base por Defecto ($ USD)"
+                required
+              >
+                <UInput
+                  v-model="formGlobal.limite_gasto_periodo"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  class="w-full"
+                  required
+                />
+                <span class="text-[11px] text-muted mt-1 block">
+                  Presupuesto predeterminado para nuevos períodos. Puedes ajustar el presupuesto de cada período específico desde Historial o Inicio.
+                </span>
+              </UFormField>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <UButton
+                type="submit"
+                size="md"
+                color="primary"
+                :icon="icons.appIcons.save"
+                label="Guardar Reglas de Presupuesto"
+                :loading="savingGlobal"
+                class="font-semibold shadow-xs"
+              />
+            </div>
+          </form>
+        </UCard>
+      </template>
+      <template #cards>
+        <!-- 2. Sección Tarjetas de Crédito Dinámicas -->
+        <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <UIcon
+                  :name="icons.appIcons.creditCard"
+                  class="w-5 h-5"
+                />
+              </div>
+              <div>
+                <h3 class="font-bold text-highlighted">
+                  Tarjetas de Crédito
+                </h3>
+                <p class="text-xs text-muted">
+                  Personaliza nombres, días de corte, reglas de pago o agrega nuevas tarjetas
+                </p>
               </div>
             </div>
 
-            <div class="flex items-center gap-1 shrink-0">
+            <UButton
+              size="sm"
+              color="primary"
+              :icon="icons.ui.icons.plus"
+              label="Agregar Tarjeta"
+              class="font-semibold shadow-xs shrink-0 self-start sm:self-auto"
+              @click="openAddCardModal"
+            />
+          </div>
+
+          <!-- Estado de carga o sin tarjetas -->
+          <div
+            v-if="pending"
+            class="py-10 text-center text-muted text-xs"
+          >
+            <UIcon
+              :name="icons.ui.icons.loading"
+              class="w-6 h-6 animate-spin mx-auto mb-2 text-primary"
+            />
+            <span>Cargando tarjetas...</span>
+          </div>
+
+          <div
+            v-else-if="!configData?.tarjetas || configData.tarjetas.length === 0"
+            class="py-10 text-center text-muted space-y-3"
+          >
+            <UIcon
+              :name="icons.appIcons.creditCard"
+              class="w-10 h-10 mx-auto opacity-30"
+            />
+            <p class="text-xs">
+              No tienes tarjetas registradas aún.
+            </p>
+            <UButton
+              size="sm"
+              color="primary"
+              :icon="icons.ui.icons.plus"
+              label="Agregar Tarjeta"
+              @click="openAddCardModal"
+            />
+          </div>
+
+          <!-- Grid de Tarjetas -->
+          <div
+            v-else
+            class="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            <div
+              v-for="t in configData.tarjetas"
+              :key="t.id"
+              class="rounded-md border p-4.5 space-y-3 relative transition-all"
+              :class="[
+                'border-default bg-default',
+                t.es_principal ? 'ring-2 ring-primary/40' : ''
+              ]"
+            >
+              <!-- Encabezado de la Tarjeta -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="space-y-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="w-3 h-3 rounded-full shrink-0"
+                      :class="cardColorClass(t.color)"
+                    />
+                    <span class="font-bold text-base text-highlighted truncate">{{ t.nombre }}</span>
+                  </div>
+                  <div
+                    v-if="t.es_principal"
+                    class="pt-0.5"
+                  >
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-xs">
+                      <UIcon
+                        :name="icons.ui.icons.star"
+                        class="w-3 h-3 fill-current"
+                      />
+                      Tarjeta Principal (Uso Mensual)
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1 shrink-0">
+                  <UButton
+                    v-if="!t.es_principal"
+                    size="xs"
+                    color="primary"
+                    variant="subtle"
+                    :icon="icons.ui.icons.star"
+                    label="Hacer Principal"
+                    :loading="settingPrincipalId === t.id"
+                    title="Establecer como tarjeta principal de uso mensual"
+                    @click="marcarComoPrincipal(t)"
+                  />
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :icon="icons.ui.icons.edit"
+                    title="Editar tarjeta"
+                    @click="openEditCardModal(t)"
+                  />
+                  <UButton
+                    size="xs"
+                    color="error"
+                    variant="ghost"
+                    :icon="icons.ui.icons.trash"
+                    title="Eliminar tarjeta"
+                    @click="openDeleteCardModal(t)"
+                  />
+                </div>
+              </div>
+
+              <!-- Atributos -->
+              <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-default">
+                <div>
+                  <span class="text-muted block text-[11px]">Día de Corte</span>
+                  <strong class="text-highlighted">Día {{ t.dia_corte }} de cada mes</strong>
+                </div>
+
+                <div>
+                  <span class="text-muted block text-[11px]">Vencimiento / Límite</span>
+                  <strong class="text-highlighted">
+                    {{ t.dia_vencimiento_pago ? `Día ${t.dia_vencimiento_pago}` : 'No definido' }}
+                  </strong>
+                </div>
+
+                <div class="col-span-2 pt-1">
+                  <span class="text-muted block text-[11px]">Regla de Pago</span>
+                  <span class="inline-flex items-center gap-1 text-[11px] font-medium text-primary">
+                    <UIcon
+                      :name="icons.appIcons.calendarCheck"
+                      class="w-3 h-3"
+                    />
+                    <template v-if="t.es_principal || t.dia_pago_propio_tipo === 'dia_siguiente_corte'">
+                      Se paga al día siguiente del corte (día {{ t.dia_corte + 1 }})
+                    </template>
+                    <template v-else-if="t.dia_pago_propio_tipo === 'dia_nomina'">
+                      Se paga en el Día de Nómina (26)
+                    </template>
+                    <template v-else>
+                      Personalizado / Fecha de vencimiento
+                    </template>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </UCard>
+      </template>
+      <template #notifications>
+        <!-- 3. Notificaciones Push -->
+        <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <UIcon
+                :name="icons.appIcons.bell"
+                class="w-5 h-5"
+              />
+            </div>
+            <div>
+              <h3 class="font-bold text-highlighted">
+                Notificaciones Push
+              </h3>
+              <p class="text-xs text-muted">
+                Recibe un aviso en este dispositivo cuando se registre un gasto automáticamente desde tu correo
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="!pushVerificado"
+            class="py-4 text-center text-muted text-xs"
+          >
+            <UIcon
+              :name="icons.ui.icons.loading"
+              class="w-5 h-5 animate-spin mx-auto mb-2 text-primary"
+            />
+            <span>Verificando compatibilidad...</span>
+          </div>
+
+          <div
+            v-else-if="!pushSoportado"
+            class="p-3.5 rounded-md border border-default bg-muted text-xs text-muted leading-relaxed"
+          >
+            Este navegador no soporta notificaciones push.
+            En iPhone/iPad primero agrega la app a la pantalla de inicio (Compartir → Agregar a inicio) y ábrela desde ahí.
+          </div>
+
+          <div
+            v-else-if="!pushConfigurado"
+            class="p-3.5 rounded-md border border-warning/20 bg-warning/10 text-xs leading-relaxed"
+          >
+            <strong class="text-warning">Falta configuración en el servidor.</strong>
+            Define las variables <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code> y <code>VAPID_SUBJECT</code> y vuelve a desplegar.
+          </div>
+
+          <div
+            v-else-if="pushPermiso === 'denied'"
+            class="p-3.5 rounded-md border border-error/30 bg-error/10 text-xs leading-relaxed"
+          >
+            <strong class="text-error">Notificaciones bloqueadas.</strong>
+            Permite las notificaciones para este sitio desde los ajustes del navegador o del sistema y recarga la página.
+          </div>
+
+          <div
+            v-else
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2"
+          >
+            <span
+              class="inline-flex items-center gap-1.5 text-xs font-medium"
+              :class="pushSuscrito ? 'text-success' : 'text-muted'"
+            >
+              <UIcon
+                :name="pushSuscrito ? icons.appIcons.bellRing : icons.appIcons.bellOff"
+                class="w-4 h-4"
+              />
+              {{ pushSuscrito ? 'Activas en este dispositivo' : 'Desactivadas en este dispositivo' }}
+            </span>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <template v-if="pushSuscrito">
+                <UButton
+                  size="sm"
+                  color="neutral"
+                  variant="outline"
+                  :icon="icons.appIcons.send"
+                  label="Enviar prueba"
+                  :loading="probandoPush"
+                  @click="onProbarPush"
+                />
+                <UButton
+                  size="sm"
+                  color="error"
+                  variant="subtle"
+                  :icon="icons.appIcons.bellOff"
+                  label="Desactivar"
+                  :loading="pushCargando"
+                  @click="onDesactivarPush"
+                />
+              </template>
               <UButton
-                v-if="!t.es_principal"
-                size="xs"
+                v-else
+                size="sm"
                 color="primary"
-                variant="subtle"
-                icon="i-lucide-star"
-                label="Hacer Principal"
-                :loading="settingPrincipalId === t.id"
-                title="Establecer como tarjeta principal de uso mensual"
-                @click="marcarComoPrincipal(t)"
-              />
-              <UButton
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-pencil"
-                title="Editar tarjeta"
-                @click="openEditCardModal(t)"
-              />
-              <UButton
-                size="xs"
-                color="error"
-                variant="ghost"
-                icon="i-lucide-trash-2"
-                title="Eliminar tarjeta"
-                @click="openDeleteCardModal(t)"
+                :icon="icons.appIcons.bellRing"
+                label="Activar notificaciones"
+                :loading="pushCargando"
+                class="font-semibold shadow-xs"
+                @click="onActivarPush"
               />
             </div>
           </div>
-
-          <!-- Atributos -->
-          <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-muted/15">
-            <div>
-              <span class="text-muted block text-[11px]">Día de Corte</span>
-              <strong class="text-foreground">Día {{ t.dia_corte }} de cada mes</strong>
+        </UCard>
+      </template>
+      <template #data>
+        <!-- 4. Mantenimiento de Datos y Demo -->
+        <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-muted text-highlighted flex items-center justify-center">
+              <UIcon
+                :name="icons.appIcons.database"
+                class="w-5 h-5"
+              />
             </div>
-
             <div>
-              <span class="text-muted block text-[11px]">Vencimiento / Límite</span>
-              <strong class="text-foreground">
-                {{ t.dia_vencimiento_pago ? `Día ${t.dia_vencimiento_pago}` : 'No definido' }}
-              </strong>
-            </div>
-
-            <div class="col-span-2 pt-1">
-              <span class="text-muted block text-[11px]">Regla de Pago</span>
-              <span class="inline-flex items-center gap-1 text-[11px] font-medium text-primary">
-                <UIcon name="i-lucide-calendar-check" class="w-3 h-3" />
-                <template v-if="t.es_principal || t.dia_pago_propio_tipo === 'dia_siguiente_corte'">
-                  Se paga al día siguiente del corte (día {{ t.dia_corte + 1 }})
-                </template>
-                <template v-else-if="t.dia_pago_propio_tipo === 'dia_nomina'">
-                  Se paga en el Día de Nómina (26)
-                </template>
-                <template v-else>
-                  Personalizado / Fecha de vencimiento
-                </template>
-              </span>
+              <h3 class="font-bold text-highlighted">
+                Gestión de datos
+              </h3>
+              <p class="text-xs text-muted">
+                Carga movimientos de demostración o limpia la base de datos para comenzar desde cero
+              </p>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- 3. Notificaciones Push -->
-    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-          <UIcon name="i-lucide-bell" class="w-5 h-5" />
-        </div>
-        <div>
-          <h3 class="font-bold text-foreground">Notificaciones Push</h3>
-          <p class="text-xs text-muted">Recibe un aviso en este dispositivo cuando se registre un gasto automáticamente desde tu correo</p>
-        </div>
-      </div>
-
-      <div v-if="!pushVerificado" class="py-4 text-center text-muted text-xs">
-        <UIcon name="i-lucide-loader-2" class="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-        <span>Verificando compatibilidad...</span>
-      </div>
-
-      <div v-else-if="!pushSoportado" class="p-3.5 rounded-xl border border-muted/20 bg-muted/5 text-xs text-muted leading-relaxed">
-        Este navegador no soporta notificaciones push.
-        En iPhone/iPad primero agrega la app a la pantalla de inicio (Compartir → Agregar a inicio) y ábrela desde ahí.
-      </div>
-
-      <div v-else-if="!pushConfigurado" class="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs leading-relaxed">
-        <strong class="text-amber-500">Falta configuración en el servidor.</strong>
-        Define las variables <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code> y <code>VAPID_SUBJECT</code> y vuelve a desplegar.
-      </div>
-
-      <div v-else-if="pushPermiso === 'denied'" class="p-3.5 rounded-xl border border-error/30 bg-error/10 text-xs leading-relaxed">
-        <strong class="text-error">Notificaciones bloqueadas.</strong>
-        Permite las notificaciones para este sitio desde los ajustes del navegador o del sistema y recarga la página.
-      </div>
-
-      <div v-else class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-        <span
-          class="inline-flex items-center gap-1.5 text-xs font-medium"
-          :class="pushSuscrito ? 'text-success' : 'text-muted'"
-        >
-          <UIcon :name="pushSuscrito ? 'i-lucide-bell-ring' : 'i-lucide-bell-off'" class="w-4 h-4" />
-          {{ pushSuscrito ? 'Activas en este dispositivo' : 'Desactivadas en este dispositivo' }}
-        </span>
-
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <template v-if="pushSuscrito">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
             <UButton
               size="sm"
               color="neutral"
               variant="outline"
-              icon="i-lucide-send"
-              label="Enviar prueba"
-              :loading="probandoPush"
-              @click="onProbarPush"
+              :icon="icons.appIcons.sparkles"
+              label="Cargar Datos Demo"
+              :loading="seeding"
+              @click="seedDemo"
             />
+
             <UButton
               size="sm"
               color="error"
               variant="subtle"
-              icon="i-lucide-bell-off"
-              label="Desactivar"
-              :loading="pushCargando"
-              @click="onDesactivarPush"
+              :icon="icons.ui.icons.trash"
+              label="Borrar todos los movimientos (Comenzar de cero)"
+              @click="confirmResetModalOpen = true"
             />
-          </template>
-          <UButton
-            v-else
-            size="sm"
-            color="primary"
-            icon="i-lucide-bell-ring"
-            label="Activar notificaciones"
-            :loading="pushCargando"
-            class="font-semibold shadow-xs"
-            @click="onActivarPush"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. Mantenimiento de Datos y Demo -->
-    <div class="rounded-2xl border border-muted/20 bg-card p-6 shadow-xs space-y-4">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-muted/20 text-foreground flex items-center justify-center">
-          <UIcon name="i-lucide-database" class="w-5 h-5" />
-        </div>
-        <div>
-          <h3 class="font-bold text-foreground">Gestión de Datos y Base de Datos</h3>
-          <p class="text-xs text-muted">Carga movimientos de demostración o limpia la base de datos para comenzar desde cero</p>
-        </div>
-      </div>
-
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-        <UButton
-          size="sm"
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-sparkles"
-          label="Cargar Datos Demo"
-          :loading="seeding"
-          @click="seedDemo"
-        />
-
-        <UButton
-          size="sm"
-          color="error"
-          variant="subtle"
-          icon="i-lucide-trash-2"
-          label="Borrar todos los movimientos (Comenzar de cero)"
-          @click="confirmResetModalOpen = true"
-        />
-      </div>
-    </div>
+          </div>
+        </UCard>
+      </template>
+    </UTabs>
 
     <!-- Modal para Agregar Tarjeta -->
-    <UModal v-model:open="addCardModalOpen" title="Agregar Nueva Tarjeta">
+    <UModal
+      v-model:open="addCardModalOpen"
+      title="Agregar Nueva Tarjeta"
+    >
       <template #body>
-        <form class="space-y-4" @submit.prevent="submitAddCard">
-          <div>
-            <label class="block text-xs font-medium text-muted mb-1">Nombre Descriptivo de la Tarjeta</label>
+        <form
+          class="min-w-0 space-y-4"
+          @submit.prevent="submitAddCard"
+        >
+          <UFormField
+            label="Nombre Descriptivo de la Tarjeta"
+            required
+          >
             <UInput
               v-model="newCardForm.nombre"
               placeholder="Ej. Mastercard - 1706, BBVA Oro, Nu..."
               class="w-full"
               required
             />
-          </div>
+          </UFormField>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-medium text-muted mb-1">Día de Corte (1-31)</label>
+            <UFormField
+              label="Día de Corte (1-31)"
+              required
+            >
               <UInput
                 v-model="newCardForm.dia_corte"
                 type="number"
@@ -777,10 +868,9 @@ const seedDemo = async () => {
                 class="w-full"
                 required
               />
-            </div>
+            </UFormField>
 
-            <div>
-              <label class="block text-xs font-medium text-muted mb-1">Día Vencimiento (opcional)</label>
+            <UFormField label="Día Vencimiento (opcional)">
               <UInput
                 v-model="newCardForm.dia_vencimiento_pago"
                 type="number"
@@ -789,38 +879,35 @@ const seedDemo = async () => {
                 placeholder="Ej. 20"
                 class="w-full"
               />
-            </div>
+            </UFormField>
           </div>
 
-          <div class="p-3 rounded-xl border border-muted/20 bg-muted/5 space-y-2">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
+          <div class="p-3 rounded-md border border-default bg-muted space-y-2">
+            <div class="flex items-center gap-2">
+              <USwitch
                 v-model="newCardForm.es_principal"
-                type="checkbox"
-                class="rounded border-muted/30 text-primary focus:ring-primary w-4 h-4"
-                @change="newCardForm.es_principal ? newCardForm.dia_pago_propio_tipo = 'dia_siguiente_corte' : null"
+                aria-label="Marcar como tarjeta principal"
+                @update:model-value="value => { if (value) newCardForm.dia_pago_propio_tipo = 'dia_siguiente_corte' }"
               />
-              <span class="text-xs font-bold text-foreground">Marcar como Tarjeta Principal (Uso Mensual)</span>
-            </label>
+              <span class="text-xs font-bold text-highlighted">Marcar como Tarjeta Principal (Uso Mensual)</span>
+            </div>
             <p class="text-[11px] text-muted leading-relaxed">
               Define el ciclo mensual estándar. Se pagará al día siguiente de su fecha de corte con el presupuesto reservado.
             </p>
           </div>
 
-          <div>
-            <label class="block text-xs font-medium text-muted mb-1">Regla de Pago</label>
-            <select
+          <UFormField label="Regla de Pago">
+            <USelect
               v-model="newCardForm.dia_pago_propio_tipo"
-              class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="dia_siguiente_corte">Pagar el día siguiente al corte (Día corte + 1)</option>
-              <option value="dia_nomina">Pagar en el Día de Nómina (26)</option>
-              <option value="dia_vencimiento">Pagar en fecha de vencimiento</option>
-            </select>
-          </div>
+              :items="[{ label: 'Día siguiente al corte', value: 'dia_siguiente_corte' }, { label: 'Día de nómina', value: 'dia_nomina' }, { label: 'Fecha de vencimiento', value: 'dia_vencimiento' }]"
+              class="w-full"
+            />
+          </UFormField>
 
-          <div>
-            <label class="block text-xs font-medium text-muted mb-2">Color Distintivo</label>
+          <fieldset>
+            <legend class="block text-xs font-medium text-muted mb-2">
+              Color distintivo
+            </legend>
             <div class="grid grid-cols-3 gap-2">
               <button
                 v-for="opt in colorOptions"
@@ -830,41 +917,66 @@ const seedDemo = async () => {
                 :class="[
                   newCardForm.color === opt.value
                     ? 'border-primary bg-primary/10 ring-2 ring-primary/30 font-bold'
-                    : 'border-muted/30 hover:border-muted/60 bg-muted/5'
+                    : 'border-default hover:border-default bg-muted'
                 ]"
+                :aria-pressed="newCardForm.color === opt.value"
                 @click="newCardForm.color = opt.value"
               >
-                <span class="w-3 h-3 rounded-full shrink-0" :class="opt.bgClass" />
+                <span
+                  class="w-3 h-3 rounded-full shrink-0"
+                  :class="opt.bgClass"
+                />
                 <span class="truncate">{{ opt.label }}</span>
               </button>
             </div>
-          </div>
+          </fieldset>
 
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
-            <UButton color="neutral" variant="ghost" label="Cancelar" @click="addCardModalOpen = false" />
-            <UButton type="submit" color="primary" icon="i-lucide-plus" label="Crear Tarjeta" :loading="addingCard" />
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              label="Cancelar"
+              @click="addCardModalOpen = false"
+            />
+            <UButton
+              type="submit"
+              color="primary"
+              :icon="icons.ui.icons.plus"
+              label="Crear Tarjeta"
+              :loading="addingCard"
+            />
           </div>
         </form>
       </template>
     </UModal>
 
     <!-- Modal para Editar Tarjeta -->
-    <UModal v-model:open="editCardModalOpen" title="Editar Tarjeta">
+    <UModal
+      v-model:open="editCardModalOpen"
+      title="Editar Tarjeta"
+    >
       <template #body>
-        <form class="space-y-4" @submit.prevent="submitEditCard">
-          <div>
-            <label class="block text-xs font-medium text-muted mb-1">Nombre Descriptivo</label>
+        <form
+          class="space-y-4"
+          @submit.prevent="submitEditCard"
+        >
+          <UFormField
+            label="Nombre Descriptivo"
+            required
+          >
             <UInput
               v-model="editCardForm.nombre"
               placeholder="Ej. Mastercard - 1706"
               class="w-full"
               required
             />
-          </div>
+          </UFormField>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-medium text-muted mb-1">Día de Corte (1-31)</label>
+            <UFormField
+              label="Día de Corte (1-31)"
+              required
+            >
               <UInput
                 v-model="editCardForm.dia_corte"
                 type="number"
@@ -873,10 +985,9 @@ const seedDemo = async () => {
                 class="w-full"
                 required
               />
-            </div>
+            </UFormField>
 
-            <div>
-              <label class="block text-xs font-medium text-muted mb-1">Día Vencimiento (opcional)</label>
+            <UFormField label="Día Vencimiento (opcional)">
               <UInput
                 v-model="editCardForm.dia_vencimiento_pago"
                 type="number"
@@ -885,38 +996,35 @@ const seedDemo = async () => {
                 placeholder="Ej. 20"
                 class="w-full"
               />
-            </div>
+            </UFormField>
           </div>
 
-          <div class="p-3 rounded-xl border border-muted/20 bg-muted/5 space-y-2">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
+          <div class="p-3 rounded-md border border-default bg-muted space-y-2">
+            <div class="flex items-center gap-2">
+              <USwitch
                 v-model="editCardForm.es_principal"
-                type="checkbox"
-                class="rounded border-muted/30 text-primary focus:ring-primary w-4 h-4"
-                @change="editCardForm.es_principal ? editCardForm.dia_pago_propio_tipo = 'dia_siguiente_corte' : null"
+                aria-label="Marcar como tarjeta principal"
+                @update:model-value="value => { if (value) editCardForm.dia_pago_propio_tipo = 'dia_siguiente_corte' }"
               />
-              <span class="text-xs font-bold text-foreground">Marcar como Tarjeta Principal (Uso Mensual)</span>
-            </label>
+              <span class="text-xs font-bold text-highlighted">Marcar como Tarjeta Principal (Uso Mensual)</span>
+            </div>
             <p class="text-[11px] text-muted leading-relaxed">
               Define el ciclo mensual estándar. Se pagará al día siguiente de su fecha de corte con el presupuesto reservado.
             </p>
           </div>
 
-          <div>
-            <label class="block text-xs font-medium text-muted mb-1">Regla de Pago</label>
-            <select
+          <UFormField label="Regla de Pago">
+            <USelect
               v-model="editCardForm.dia_pago_propio_tipo"
-              class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="dia_siguiente_corte">Pagar el día siguiente al corte (Día corte + 1)</option>
-              <option value="dia_nomina">Pagar en el Día de Nómina (26)</option>
-              <option value="dia_vencimiento">Pagar en fecha de vencimiento</option>
-            </select>
-          </div>
+              :items="[{ label: 'Día siguiente al corte', value: 'dia_siguiente_corte' }, { label: 'Día de nómina', value: 'dia_nomina' }, { label: 'Fecha de vencimiento', value: 'dia_vencimiento' }]"
+              class="w-full"
+            />
+          </UFormField>
 
-          <div>
-            <label class="block text-xs font-medium text-muted mb-2">Color Distintivo</label>
+          <fieldset>
+            <legend class="block text-xs font-medium text-muted mb-2">
+              Color distintivo
+            </legend>
             <div class="grid grid-cols-3 gap-2">
               <button
                 v-for="opt in colorOptions"
@@ -926,44 +1034,71 @@ const seedDemo = async () => {
                 :class="[
                   editCardForm.color === opt.value
                     ? 'border-primary bg-primary/10 ring-2 ring-primary/30 font-bold'
-                    : 'border-muted/30 hover:border-muted/60 bg-muted/5'
+                    : 'border-default hover:border-default bg-muted'
                 ]"
+                :aria-pressed="editCardForm.color === opt.value"
                 @click="editCardForm.color = opt.value"
               >
-                <span class="w-3 h-3 rounded-full shrink-0" :class="opt.bgClass" />
+                <span
+                  class="w-3 h-3 rounded-full shrink-0"
+                  :class="opt.bgClass"
+                />
                 <span class="truncate">{{ opt.label }}</span>
               </button>
             </div>
-          </div>
+          </fieldset>
 
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
-            <UButton color="neutral" variant="ghost" label="Cancelar" @click="editCardModalOpen = false" />
-            <UButton type="submit" color="primary" icon="i-lucide-save" label="Guardar Cambios" :loading="editingCard" />
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              label="Cancelar"
+              @click="editCardModalOpen = false"
+            />
+            <UButton
+              type="submit"
+              color="primary"
+              :icon="icons.appIcons.save"
+              label="Guardar Cambios"
+              :loading="editingCard"
+            />
           </div>
         </form>
       </template>
     </UModal>
 
     <!-- Modal de Confirmación y Advertencia de Eliminación de Tarjeta -->
-    <UModal v-model:open="deleteModalOpen" title="Eliminar Tarjeta">
+    <UModal
+      v-model:open="deleteModalOpen"
+      title="Eliminar Tarjeta"
+    >
       <template #body>
         <div class="space-y-4">
-          <div v-if="deleteErrorMessage" class="p-3.5 rounded-xl border border-error/30 bg-error/10 text-error space-y-1">
+          <div
+            v-if="deleteErrorMessage"
+            class="p-3.5 rounded-md border border-error/30 bg-error/10 text-error space-y-1"
+          >
             <div class="flex items-center gap-2 font-bold text-sm">
-              <UIcon name="i-lucide-alert-triangle" class="w-4 h-4" />
+              <UIcon
+                :name="icons.ui.icons.warning"
+                class="w-4 h-4"
+              />
               <span>Acción no permitida</span>
             </div>
-            <p class="text-xs leading-relaxed text-foreground">
+            <p class="text-xs leading-relaxed text-highlighted">
               {{ deleteErrorMessage }}
             </p>
           </div>
 
-          <p v-else class="text-sm text-muted">
+          <p
+            v-else
+            class="text-sm text-muted"
+          >
             ¿Estás seguro de que deseas eliminar la tarjeta <strong>"{{ cardToDelete?.nombre }}"</strong>?
             Esta acción solo se completará si la tarjeta no posee gastos históricos ni reconciliaciones registradas.
           </p>
 
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
             <UButton
               color="neutral"
               variant="ghost"
@@ -973,7 +1108,7 @@ const seedDemo = async () => {
             <UButton
               v-if="!deleteErrorMessage"
               color="error"
-              icon="i-lucide-trash"
+              :icon="icons.ui.icons.trash"
               label="Sí, eliminar tarjeta"
               :loading="deletingCard"
               @click="confirmDeleteCard"
@@ -984,7 +1119,10 @@ const seedDemo = async () => {
     </UModal>
 
     <!-- Modal de Confirmación para Limpiar Datos -->
-    <UModal v-model:open="confirmResetModalOpen" title="¿Borrar todos los movimientos?">
+    <UModal
+      v-model:open="confirmResetModalOpen"
+      title="¿Borrar todos los movimientos?"
+    >
       <template #body>
         <div class="space-y-4">
           <p class="text-sm text-muted">
@@ -994,7 +1132,7 @@ const seedDemo = async () => {
           <p class="text-xs text-muted">
             Úsalo si deseas limpiar los datos de demostración y empezar a registrar tu información personal real.
           </p>
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
             <UButton
               color="neutral"
               variant="ghost"
@@ -1003,7 +1141,7 @@ const seedDemo = async () => {
             />
             <UButton
               color="error"
-              icon="i-lucide-trash-2"
+              :icon="icons.ui.icons.trash"
               label="Sí, borrar todo"
               :loading="resetting"
               @click="resetData"

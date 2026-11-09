@@ -1,146 +1,56 @@
 <script setup lang="ts">
-const props = defineProps<{
+const icons = useAppConfig()
+
+defineProps<{
   tarjetaActiva?: {
     codigo?: string
     esPrincipal?: boolean
     motivo?: string
-    info?: { id?: number; nombre?: string; dia_corte?: number; dia_pago_propio_tipo?: string; es_principal?: boolean; color?: string | null } | null
-    proximoCambio?: { tarjetaNueva?: string; tarjetaNuevaNombre?: string; fechaCambio: string; diasFaltantes: number }
+    info?: { id?: number, nombre?: string, dia_corte?: number, dia_pago_propio_tipo?: string, es_principal?: boolean, color?: string | null } | null
+    proximoCambio?: { tarjetaNueva?: string, tarjetaNuevaNombre?: string, fechaCambio: string, diasFaltantes: number }
   }
 }>()
 
 const { openNewExpenseModal, formatDate } = useFinanzas()
-
-const cardColor = computed(() => props.tarjetaActiva?.info?.color || (props.tarjetaActiva?.codigo === 'B' ? 'indigo' : 'emerald'))
-
-const colorClasses = computed(() => {
-  const c = cardColor.value
-  switch (c) {
-    case 'indigo':
-      return {
-        cardBg: 'bg-linear-to-br from-indigo-500/15 via-indigo-500/5 to-background border-indigo-500/30',
-        glow: 'bg-indigo-400',
-        badge: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-        pill: 'bg-indigo-600',
-        btnColor: 'primary' as const
-      }
-    case 'amber':
-      return {
-        cardBg: 'bg-linear-to-br from-amber-500/15 via-amber-500/5 to-background border-amber-500/30',
-        glow: 'bg-amber-400',
-        badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-        pill: 'bg-amber-600',
-        btnColor: 'warning' as const
-      }
-    case 'violet':
-    case 'purple':
-      return {
-        cardBg: 'bg-linear-to-br from-violet-500/15 via-violet-500/5 to-background border-violet-500/30',
-        glow: 'bg-violet-400',
-        badge: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-        pill: 'bg-violet-600',
-        btnColor: 'primary' as const
-      }
-    case 'rose':
-    case 'red':
-      return {
-        cardBg: 'bg-linear-to-br from-rose-500/15 via-rose-500/5 to-background border-rose-500/30',
-        glow: 'bg-rose-400',
-        badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-        pill: 'bg-rose-600',
-        btnColor: 'error' as const
-      }
-    case 'sky':
-    case 'cyan':
-    case 'blue':
-      return {
-        cardBg: 'bg-linear-to-br from-sky-500/15 via-sky-500/5 to-background border-sky-500/30',
-        glow: 'bg-sky-400',
-        badge: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
-        pill: 'bg-sky-600',
-        btnColor: 'info' as const
-      }
-    default:
-      return {
-        cardBg: 'bg-linear-to-br from-emerald-500/15 via-emerald-500/5 to-background border-emerald-500/30',
-        glow: 'bg-emerald-400',
-        badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-        pill: 'bg-emerald-600',
-        btnColor: 'success' as const
-      }
-  }
-})
 </script>
 
 <template>
-  <div
-    class="relative overflow-hidden rounded-2xl border p-6 sm:p-8 transition-all shadow-lg"
-    
-  >
-    <!-- Background Glow Effect -->
-    <div
-      class="absolute -right-16 -top-16 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
-      
-    />
-
-    <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-      <div class="space-y-3 max-w-xl">
-        <div class="flex items-center gap-2.5 flex-wrap">
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border shadow-xs"
-           
+  <UCard :ui="{ body: 'p-4 sm:p-5' }">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="min-w-0 space-y-1">
+        <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+          <span>Tarjeta sugerida hoy</span>
+          <UBadge
+            v-if="tarjetaActiva?.info?.es_principal || tarjetaActiva?.esPrincipal"
+            color="primary"
+            variant="subtle"
+            size="sm"
           >
-            <span class="w-2 h-2 rounded-full animate-ping"  />
-            Tarjeta Activa Hoy
-          </span>
-
-          <span
-            v-if="props.tarjetaActiva?.info?.es_principal || props.tarjetaActiva?.esPrincipal"
-            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30"
-          >
-            <UIcon name="i-lucide-star" class="w-3 h-3 fill-amber-500" /> Principal
-          </span>
-
-          <span v-if="props.tarjetaActiva?.proximoCambio" class="text-xs text-muted">
-            Cambia a <strong class="text-foreground">{{ props.tarjetaActiva.proximoCambio.tarjetaNuevaNombre || props.tarjetaActiva.proximoCambio.tarjetaNueva }}</strong> en {{ props.tarjetaActiva.proximoCambio.diasFaltantes }} {{ props.tarjetaActiva.proximoCambio.diasFaltantes === 1 ? 'día' : 'días' }} ({{ formatDate(props.tarjetaActiva.proximoCambio.fechaCambio) }})
-          </span>
+            Principal
+          </UBadge>
         </div>
-
-        <div>
-          <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-3 flex-wrap">
-            <span class="text-muted">Usar:</span>
-            <span
-              class="px-3.5 py-0.5 rounded-xl font-bold text-white shadow-md"
-              :class="colorClasses.pill"
-            >
-              {{ props.tarjetaActiva?.info?.nombre || 'Tarjeta Principal' }}
-            </span>
-          </h2>
-          <p class="text-sm text-muted mt-2">
-            <template v-if="props.tarjetaActiva?.motivo">
-              {{ props.tarjetaActiva.motivo }}
-            </template>
-            <template v-else-if="props.tarjetaActiva?.info?.dia_corte">
-              Corte el día {{ props.tarjetaActiva.info.dia_corte }}.
-              {{ props.tarjetaActiva.info.dia_pago_propio_tipo === 'dia_siguiente_corte' ? 'Se paga el día posterior al corte.' : 'Se paga con el depósito de nómina.' }}
-            </template>
-            <template v-else>
-              Tarjeta recomendada para maximizar tu plazo de financiamiento según el ciclo actual.
-            </template>
-          </p>
-        </div>
+        <h2 class="font-semibold text-highlighted">
+          <CardIdentifier
+            :name="tarjetaActiva?.info?.nombre || 'Tarjeta principal'"
+            :color="tarjetaActiva?.info?.color"
+          />
+        </h2>
+        <p class="max-w-2xl text-xs text-muted">
+          {{ tarjetaActiva?.motivo || 'Tarjeta recomendada según el ciclo actual.' }}
+        </p>
+        <p
+          v-if="tarjetaActiva?.proximoCambio"
+          class="text-xs text-muted"
+        >
+          Próximo cambio: {{ tarjetaActiva.proximoCambio.tarjetaNuevaNombre || tarjetaActiva.proximoCambio.tarjetaNueva }} · {{ formatDate(tarjetaActiva.proximoCambio.fechaCambio) }}
+        </p>
       </div>
-
-      <div class="flex items-center gap-3 shrink-0">
-        <UButton
-          size="lg"
-          :color="colorClasses.btnColor"
-          icon="i-lucide-plus"
-          label="Registrar Gasto Rápido"
-          class="font-semibold shadow-md"
-          @click="openNewExpenseModal({ tarjeta_id: props.tarjetaActiva?.info?.id })"
-        />
-      </div>
+      <UButton
+        :icon="icons.ui.icons.plus"
+        label="Registrar gasto"
+        size="sm"
+        @click="openNewExpenseModal({ tarjeta_id: tarjetaActiva?.info?.id })"
+      />
     </div>
-  </div>
+  </UCard>
 </template>

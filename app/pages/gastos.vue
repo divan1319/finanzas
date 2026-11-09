@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { periodoActual } from '#shared/utils/cicloFinanciero'
 
-const { openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate, triggerRefresh } = useFinanzas()
+const icons = useAppConfig()
+
+const { openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate, triggerRefresh, refreshKey } = useFinanzas()
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
@@ -55,6 +57,9 @@ const { data: gastosData, pending, refresh } = useCachedFetch('/api/gastos', {
   }))
 })
 
+// Filtered queries have dynamic keys; refresh the active list after a mutation.
+watch(refreshKey, () => refresh())
+
 const categorias = [
   'Todas',
   'Alimentos',
@@ -94,7 +99,7 @@ const deleteGasto = async (id: number) => {
       title: 'Eliminación guardada offline',
       description: 'Se aplicará en el servidor al conectarte.',
       color: 'warning',
-      icon: 'i-lucide-cloud-off'
+      icon: icons.appIcons.cloudOff
     })
     deletingId.value = null
     return
@@ -105,7 +110,7 @@ const deleteGasto = async (id: number) => {
     toast.add({
       title: 'Gasto eliminado',
       color: 'success',
-      icon: 'i-lucide-trash'
+      icon: icons.ui.icons.trash
     })
     await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones'])
   } catch (err: any) {
@@ -120,7 +125,7 @@ const deleteGasto = async (id: number) => {
         title: 'Eliminación guardada offline',
         description: 'Se aplicará en el servidor al conectarte.',
         color: 'warning',
-        icon: 'i-lucide-cloud-off'
+        icon: icons.appIcons.cloudOff
       })
     } else {
       toast.add({
@@ -136,18 +141,22 @@ const deleteGasto = async (id: number) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="min-w-0 space-y-4">
     <!-- Encabezado -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="page-header">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Registro de Gastos</h1>
-        <p class="text-sm text-muted">Historial detallado y filtros de movimientos por tarjeta</p>
+        <h1 class="text-xl sm:text-2xl font-semibold tracking-tight">
+          Registro de Gastos
+        </h1>
+        <p class="text-sm text-muted">
+          Historial detallado y filtros de movimientos por tarjeta
+        </p>
       </div>
 
       <UButton
         size="md"
         color="primary"
-        icon="i-lucide-plus"
+        :icon="icons.ui.icons.plus"
         label="Registrar Gasto"
         class="font-semibold shadow-xs"
         @click="openNewExpenseModal()"
@@ -155,168 +164,198 @@ const deleteGasto = async (id: number) => {
     </div>
 
     <!-- Barra de Filtros -->
-    <div class="rounded-2xl border border-muted/20 bg-card p-4 sm:p-5 shadow-xs space-y-4">
+    <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- Búsqueda de texto -->
-        <div>
-          <label class="block text-xs font-medium text-muted mb-1">Buscar comercio / descripción</label>
+        <UFormField label="Buscar comercio / descripción">
           <UInput
             v-model="search"
             placeholder="Ej. Soriana, Uber..."
-            icon="i-lucide-search"
+            :icon="icons.ui.icons.search"
             class="w-full"
           />
-        </div>
+        </UFormField>
 
         <!-- Filtro Tarjeta -->
-        <div>
-          <label class="block text-xs font-medium text-muted mb-1">Tarjeta</label>
-          <select
+        <UFormField label="Tarjeta">
+          <USelect
             v-model="tarjetaId"
-            class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="todas">Todas las tarjetas</option>
-            <option
-              v-for="t in configData?.tarjetas"
-              :key="t.id"
-              :value="String(t.id)"
-            >
-              {{ t.nombre }}
-            </option>
-          </select>
-        </div>
+            :items="[{ label: 'Todas las tarjetas', value: 'todas' }, ...(configData?.tarjetas || []).map(t => ({ label: t.nombre, value: String(t.id) }))]"
+            class="w-full"
+          />
+        </UFormField>
 
         <!-- Filtro Categoría -->
-        <div>
-          <label class="block text-xs font-medium text-muted mb-1">Categoría</label>
-          <select
+        <UFormField label="Categoría">
+          <USelect
             v-model="categoriaFiltro"
-            class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option v-for="cat in categorias" :key="cat" :value="cat">
-              {{ cat }}
-            </option>
-          </select>
-        </div>
+            :items="categorias"
+            class="w-full"
+          />
+        </UFormField>
 
         <!-- Filtro Rápido de Período -->
-        <div>
-          <label class="block text-xs font-medium text-muted mb-1">Rango Temporal</label>
-          <select
+        <UFormField label="Rango Temporal">
+          <USelect
             v-model="filtroPeriodo"
-            class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="actual">Período Nómina Actual</option>
-            <option value="todos">Todos los tiempos</option>
-            <option value="custom">Rango Personalizado</option>
-          </select>
-        </div>
+            :items="[{ label: 'Período actual', value: 'actual' }, { label: 'Todos los tiempos', value: 'todos' }, { label: 'Rango personalizado', value: 'custom' }]"
+            class="w-full"
+          />
+        </UFormField>
       </div>
 
       <!-- Fechas personalizadas si aplica -->
-      <div v-if="filtroPeriodo === 'custom'" class="grid grid-cols-2 gap-3 pt-2 border-t border-muted/15">
-        <div>
-          <label class="block text-xs text-muted mb-1">Desde</label>
-          <UInput v-model="fechaInicio" type="date" class="w-full" />
-        </div>
-        <div>
-          <label class="block text-xs text-muted mb-1">Hasta</label>
-          <UInput v-model="fechaFin" type="date" class="w-full" />
-        </div>
+      <div
+        v-if="filtroPeriodo === 'custom'"
+        class="grid grid-cols-2 gap-3 pt-2 border-t border-default"
+      >
+        <UFormField label="Desde">
+          <UInput
+            v-model="fechaInicio"
+            type="date"
+            class="w-full"
+          />
+        </UFormField>
+        <UFormField label="Hasta">
+          <UInput
+            v-model="fechaFin"
+            type="date"
+            class="w-full"
+          />
+        </UFormField>
       </div>
-    </div>
+    </UCard>
 
     <!-- Resumen de resultados filtrados -->
     <div class="flex items-center justify-between px-2 text-xs text-muted">
       <span>Mostrando {{ gastosData?.cantidad || 0 }} movimientos</span>
       <span>
         Total filtrado:
-        <strong class="text-sm font-bold text-foreground">{{ formatCurrency(gastosData?.total || 0) }}</strong>
+        <strong class="text-sm font-bold text-highlighted">{{ formatCurrency(gastosData?.total || 0) }}</strong>
       </span>
     </div>
 
     <!-- Tabla Principal de Gastos -->
-    <div class="rounded-2xl border border-muted/20 bg-card overflow-hidden shadow-xs">
-      <div v-if="pending" class="py-16 text-center text-muted">
-        <UIcon name="i-lucide-loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+    <UCard :ui="{ body: 'p-0 sm:p-0 overflow-hidden' }">
+      <div
+        v-if="pending"
+        class="py-16 text-center text-muted"
+      >
+        <UIcon
+          :name="icons.ui.icons.loading"
+          class="w-8 h-8 animate-spin mx-auto mb-2 text-primary"
+        />
         <span>Cargando gastos...</span>
       </div>
 
-      <div v-else-if="!gastosData?.gastos || gastosData.gastos.length === 0" class="py-16 text-center text-muted space-y-3">
-        <UIcon name="i-lucide-receipt" class="w-12 h-12 mx-auto opacity-30" />
-        <p class="text-sm">No se encontraron gastos con los filtros seleccionados.</p>
+      <div
+        v-else-if="!gastosData?.gastos || gastosData.gastos.length === 0"
+        class="py-16 text-center text-muted space-y-3"
+      >
+        <UIcon
+          :name="icons.appIcons.receipt"
+          class="w-12 h-12 mx-auto opacity-30"
+        />
+        <p class="text-sm">
+          No se encontraron gastos con los filtros seleccionados.
+        </p>
         <UButton
           size="sm"
           color="primary"
-          icon="i-lucide-plus"
+          :icon="icons.ui.icons.plus"
           label="Registrar Nuevo Gasto"
           @click="openNewExpenseModal()"
         />
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="text-xs text-muted uppercase bg-muted/5 border-b border-muted/20">
+      <div
+        v-else
+        class="overflow-x-auto"
+      >
+        <table class="data-table">
+          <thead class="text-xs text-muted uppercase bg-muted border-b border-default">
             <tr>
-              <th class="py-3 px-4 font-semibold">Fecha</th>
-              <th class="py-3 px-4 font-semibold">Tarjeta</th>
-              <th class="py-3 px-4 font-semibold">Descripción</th>
-              <th class="py-3 px-4 font-semibold">Categoría</th>
-              <th class="py-3 px-4 font-semibold text-right">Monto</th>
-              <th class="py-3 px-4 font-semibold text-center">Acciones</th>
+              <th class="py-3 px-4 font-semibold">
+                Fecha
+              </th>
+              <th class="py-3 px-4 font-semibold">
+                Tarjeta
+              </th>
+              <th class="py-3 px-4 font-semibold">
+                Descripción
+              </th>
+              <th class="py-3 px-4 font-semibold">
+                Categoría
+              </th>
+              <th class="py-3 px-4 font-semibold text-right">
+                Monto
+              </th>
+              <th class="py-3 px-4 font-semibold text-center">
+                Acciones
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-muted/15">
+          <tbody class="divide-y divide-default">
             <tr
               v-for="g in gastosData.gastos"
               :key="g.id"
-              class="hover:bg-muted/5 transition-colors"
+              class="hover:bg-muted transition-colors"
             >
               <td class="py-3.5 px-4 font-medium whitespace-nowrap">
                 {{ formatDate(g.fecha) }}
               </td>
               <td class="py-3.5 px-4 whitespace-nowrap">
                 <UBadge
-                  :color="g.tarjeta_color === 'indigo' ? 'info' : (g.tarjeta_color === 'amber' ? 'warning' : (g.tarjeta_color === 'rose' || g.tarjeta_color === 'red' ? 'error' : 'success'))"
+                  color="neutral"
                   variant="subtle"
                   size="sm"
                 >
-                  {{ g.tarjeta_nombre }}
+                  <CardIdentifier
+                    :name="g.tarjeta_nombre || 'Tarjeta'"
+                    :color="g.tarjeta_color"
+                  />
                 </UBadge>
               </td>
-              <td class="py-3.5 px-4 font-medium text-foreground max-w-[260px]">
-                <div class="truncate">{{ g.descripcion }}</div>
+              <td class="py-3.5 px-4 font-medium text-highlighted max-w-[260px]">
+                <div class="truncate">
+                  {{ g.descripcion }}
+                </div>
                 <div
                   v-if="g.periodoPagoInfo"
                   class="text-[11px] font-normal flex items-center gap-1 mt-0.5"
-                  :class="g.periodoPagoInfo.esDiferido ? 'text-indigo-400 font-medium' : 'text-muted'"
+                  :class="g.periodoPagoInfo.esDiferido ? 'text-info font-medium' : 'text-muted'"
                 >
-                  <UIcon :name="g.periodoPagoInfo.esDiferido ? 'i-lucide-calendar-clock' : 'i-lucide-calendar-check'" class="w-3 h-3 shrink-0" />
+                  <UIcon
+                    :name="g.periodoPagoInfo.esDiferido ? icons.appIcons.calendarClock : icons.appIcons.calendarCheck"
+                    class="w-3 h-3 shrink-0"
+                  />
                   <span class="truncate">{{ g.periodoPagoInfo.etiquetaPago }}</span>
                 </div>
               </td>
               <td class="py-3.5 px-4 text-muted whitespace-nowrap">
-                <span class="inline-flex items-center gap-1.5 text-xs bg-muted/10 px-2 py-0.5 rounded-md">
+                <span class="inline-flex items-center gap-1.5 text-xs bg-muted px-2 py-0.5 rounded-md">
                   {{ g.categoria || 'General' }}
                 </span>
               </td>
-              <td class="py-3.5 px-4 text-right font-extrabold text-foreground whitespace-nowrap">
+              <td class="py-3.5 px-4 text-right font-extrabold text-highlighted whitespace-nowrap">
                 {{ formatCurrency(g.monto) }}
               </td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1">
                   <UButton
+                    aria-label="Editar gasto"
                     size="xs"
                     color="neutral"
                     variant="ghost"
-                    icon="i-lucide-pencil"
+                    :icon="icons.ui.icons.edit"
                     @click="openEditExpenseModal(g)"
                   />
                   <UButton
+                    aria-label="Eliminar gasto"
                     size="xs"
                     color="error"
                     variant="ghost"
-                    icon="i-lucide-trash"
+                    :icon="icons.ui.icons.trash"
                     :loading="deletingId === g.id"
                     @click="deleteGasto(g.id)"
                   />
@@ -330,22 +369,19 @@ const deleteGasto = async (id: number) => {
       <!-- Footer de Paginación -->
       <div
         v-if="totalGastos > 0"
-        class="px-4 py-3 border-t border-muted/15 bg-muted/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted"
+        class="px-4 py-3 border-t border-default bg-muted flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted"
       >
         <div class="flex items-center gap-2">
           <span>
             Mostrando {{ (page - 1) * itemsPerPage + 1 }} – {{ Math.min(page * itemsPerPage, totalGastos) }} de {{ totalGastos }} gastos
           </span>
-          <select
+          <USelect
             v-model="itemsPerPage"
-            class="rounded border border-muted/30 bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            @change="page = 1"
-          >
-            <option :value="5">5 por pág.</option>
-            <option :value="10">10 por pág.</option>
-            <option :value="20">20 por pág.</option>
-            <option :value="50">50 por pág.</option>
-          </select>
+            :items="[5, 10, 20, 50].map(value => ({ label: `${value} por pág.`, value }))"
+            class="w-full"
+            aria-label="Gastos por página"
+            @update:model-value="page = 1"
+          />
         </div>
 
         <UPagination
@@ -359,6 +395,6 @@ const deleteGasto = async (id: number) => {
           :sibling-count="1"
         />
       </div>
-    </div>
+    </UCard>
   </div>
 </template>

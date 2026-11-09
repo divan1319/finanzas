@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { tarjetaSugeridaEn, calcularPeriodoPagoGasto, formatDateISO } from '#shared/utils/cicloFinanciero'
 
+const icons = useAppConfig()
+
 const props = defineProps<{
   tarjetas?: Array<{
     id: number
@@ -8,7 +10,7 @@ const props = defineProps<{
     nombre: string
     color?: string | null
     dia_corte: number
-    dia_pago_propio_tipo?: string
+    dia_pago_propio_tipo: string
     es_principal?: boolean
   }>
   diaObjetivoNomina?: number
@@ -48,7 +50,7 @@ const isEditing = computed(() => !!form.value.id)
 // Tarjeta sugerida dinámicamente según la fecha y tarjetas
 const sugerenciaActual = computed(() => {
   if (!form.value.fecha || !props.tarjetas?.length) return null
-  return tarjetaSugeridaEn(form.value.fecha, props.tarjetas as any, props.diaObjetivoNomina || 26)
+  return tarjetaSugeridaEn(form.value.fecha, props.tarjetas, props.diaObjetivoNomina || 26)
 })
 
 const tarjetaSugeridaId = computed(() => {
@@ -63,7 +65,7 @@ const tarjetaSeleccionada = computed(() => {
 // Cálculo en tiempo real de cuándo se pagará el gasto
 const infoPagoGasto = computed(() => {
   if (!form.value.fecha || !tarjetaSeleccionada.value) return null
-  return calcularPeriodoPagoGasto(form.value.fecha, tarjetaSeleccionada.value as any, props.diaObjetivoNomina || 26)
+  return calcularPeriodoPagoGasto(form.value.fecha, tarjetaSeleccionada.value, props.diaObjetivoNomina || 26)
 })
 
 // Auto-seleccionar tarjeta al cambiar la fecha si el usuario no ha forzado un override manual
@@ -119,7 +121,7 @@ const submitGasto = async () => {
       title: 'Campos incompletos',
       description: 'Por favor llena todos los campos obligatorios.',
       color: 'warning',
-      icon: 'i-lucide-alert-triangle'
+      icon: icons.ui.icons.warning
     })
     return
   }
@@ -130,7 +132,7 @@ const submitGasto = async () => {
       title: 'Monto inválido',
       description: 'El monto debe ser un valor numérico positivo.',
       color: 'error',
-      icon: 'i-lucide-x-circle'
+      icon: icons.ui.icons.error
     })
     return
   }
@@ -157,7 +159,7 @@ const submitGasto = async () => {
       title: 'Guardado sin conexión',
       description: 'El gasto se guardó en tu dispositivo. Se sincronizará automáticamente al conectarte.',
       color: 'warning',
-      icon: 'i-lucide-cloud-off'
+      icon: icons.appIcons.cloudOff
     })
 
     closeExpenseModal()
@@ -175,7 +177,7 @@ const submitGasto = async () => {
         title: 'Gasto actualizado',
         description: 'Se guardaron los cambios correctamente.',
         color: 'success',
-        icon: 'i-lucide-check'
+        icon: icons.ui.icons.check
       })
     } else {
       await $fetch('/api/gastos', {
@@ -186,7 +188,7 @@ const submitGasto = async () => {
         title: 'Gasto registrado',
         description: `Se registró el gasto de $${montoNum.toFixed(2)} exitosamente.`,
         color: 'success',
-        icon: 'i-lucide-check-circle'
+        icon: icons.ui.icons.success
       })
     }
 
@@ -206,7 +208,7 @@ const submitGasto = async () => {
         title: 'Guardado en modo offline',
         description: 'No se pudo conectar con el servidor. Se guardó localmente para sincronizar.',
         color: 'warning',
-        icon: 'i-lucide-cloud-off'
+        icon: icons.appIcons.cloudOff
       })
       closeExpenseModal()
     } else {
@@ -214,7 +216,7 @@ const submitGasto = async () => {
         title: 'Error al guardar',
         description: err?.statusMessage || err?.message || 'Ocurrió un problema al guardar el gasto.',
         color: 'error',
-        icon: 'i-lucide-x-circle'
+        icon: icons.ui.icons.error
       })
     }
   } finally {
@@ -224,27 +226,35 @@ const submitGasto = async () => {
 </script>
 
 <template>
-  <UModal v-model:open="expenseModalOpen" :title="isEditing ? 'Editar Gasto' : 'Registrar Nuevo Gasto'">
+  <UModal
+    v-model:open="expenseModalOpen"
+    :title="isEditing ? 'Editar Gasto' : 'Registrar Nuevo Gasto'"
+  >
     <template #body>
-      <form class="space-y-4" @submit.prevent="submitGasto">
+      <form
+        class="min-w-0 space-y-4"
+        @submit.prevent="submitGasto"
+      >
         <!-- Fecha del gasto -->
-        <div>
-          <label class="block text-sm font-medium text-muted mb-1">Fecha del Gasto</label>
+        <UFormField label="Fecha del Gasto">
           <UInput
             v-model="form.fecha"
             type="date"
             class="w-full"
-            icon="i-lucide-calendar"
+            :icon="icons.appIcons.calendar"
           />
-        </div>
+        </UFormField>
 
         <!-- Tarjeta sugerida y selector -->
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="block text-sm font-medium text-muted">Tarjeta de Pago</label>
-            <div v-if="tarjetaSugeridaId" class="flex items-center gap-1.5 text-xs">
+            <div
+              v-if="tarjetaSugeridaId"
+              class="flex items-center gap-1.5 text-xs"
+            >
               <span class="text-muted">Sugerida:</span>
-              <UBadge
+              <UButton
                 color="primary"
                 variant="subtle"
                 size="sm"
@@ -252,7 +262,7 @@ const submitGasto = async () => {
                 @click="aplicarSugerida"
               >
                 {{ props.tarjetas?.find(c => c.id === tarjetaSugeridaId)?.nombre || 'Activa' }}
-              </UBadge>
+              </UButton>
             </div>
           </div>
 
@@ -260,23 +270,33 @@ const submitGasto = async () => {
             <button
               v-for="t in props.tarjetas"
               :key="t.id"
+              :aria-pressed="form.tarjeta_id === t.id"
               type="button"
               class="p-3 rounded-lg border text-left transition-all relative flex flex-col justify-between"
               :class="[
                 form.tarjeta_id === t.id
                   ? 'border-primary bg-primary/10 ring-2 ring-primary/30 shadow-sm'
-                  : 'border-muted/30 hover:border-muted/60 bg-muted/5'
+                  : 'border-default hover:border-default bg-muted'
               ]"
               @click="onTarjetaSelectChange(t.id)"
             >
               <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-1.5 min-w-0">
-                  <span class="font-semibold text-sm truncate text-foreground">{{ t.nombre }}</span>
-                  <UIcon v-if="t.es_principal" name="i-lucide-star" class="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" title="Tarjeta Principal" />
+                  <CardIdentifier
+                    :name="t.nombre"
+                    :color="t.color"
+                    class="text-sm font-medium"
+                  />
+                  <UIcon
+                    v-if="t.es_principal"
+                    :name="icons.ui.icons.star"
+                    class="w-3 h-3 text-primary fill-current shrink-0"
+                    title="Tarjeta Principal"
+                  />
                 </div>
                 <UIcon
                   v-if="form.tarjeta_id === t.id"
-                  name="i-lucide-check-circle-2"
+                  :name="icons.ui.icons.success"
                   class="w-4 h-4 text-primary shrink-0 ml-1"
                 />
               </div>
@@ -286,7 +306,10 @@ const submitGasto = async () => {
                   v-if="t.id === tarjetaSugeridaId"
                   class="text-[10px] font-medium text-primary flex items-center gap-1"
                 >
-                  <UIcon name="i-lucide-sparkles" class="w-3 h-3" /> Recomendada
+                  <UIcon
+                    :name="icons.appIcons.sparkles"
+                    class="w-3 h-3"
+                  /> Recomendada
                 </span>
               </div>
             </button>
@@ -298,16 +321,16 @@ const submitGasto = async () => {
             class="mt-2 p-2.5 rounded-lg border text-xs flex items-center gap-2.5 transition-all shadow-xs"
             :class="[
               infoPagoGasto.esDiferido
-                ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400'
-                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+                ? 'border-info/30 bg-info/10 text-info'
+                : 'border-success/30 bg-success/10 text-success dark:text-success'
             ]"
           >
             <UIcon
-              :name="infoPagoGasto.esDiferido ? 'i-lucide-calendar-clock' : 'i-lucide-calendar-check'"
+              :name="infoPagoGasto.esDiferido ? icons.appIcons.calendarClock : icons.appIcons.calendarCheck"
               class="w-4 h-4 shrink-0"
             />
             <div class="leading-tight">
-              <span class="font-semibold text-foreground block">
+              <span class="font-semibold text-highlighted block">
                 {{ infoPagoGasto.etiquetaPago }}
               </span>
               <span class="text-[11px] opacity-80 block mt-0.5">
@@ -320,47 +343,47 @@ const submitGasto = async () => {
 
         <!-- Monto y Categoría -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-muted mb-1">Monto ($ USD)</label>
+          <UFormField
+            label="Monto ($ USD)"
+            required
+          >
             <UInput
               v-model="form.monto"
               type="number"
               step="0.01"
               min="0.01"
               placeholder="0.00"
-              icon="i-lucide-dollar-sign"
+              :icon="icons.appIcons.dollarSign"
               class="w-full"
               required
             />
-          </div>
+          </UFormField>
 
-          <div>
-            <label class="block text-sm font-medium text-muted mb-1">Categoría</label>
-            <select
+          <UFormField label="Categoría">
+            <USelect
               v-model="form.categoria"
-              class="w-full rounded-md border border-muted/30 bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option v-for="cat in categorias" :key="cat" :value="cat">
-                {{ cat }}
-              </option>
-            </select>
-          </div>
+              :items="categorias"
+              class="w-full"
+            />
+          </UFormField>
         </div>
 
         <!-- Descripción -->
-        <div>
-          <label class="block text-sm font-medium text-muted mb-1">Descripción / Comercio</label>
+        <UFormField
+          label="Descripción / Comercio"
+          required
+        >
           <UInput
             v-model="form.descripcion"
             placeholder="Ej. Supermercado Chedraui, Gasolina, Netflix..."
-            icon="i-lucide-shopping-bag"
+            :icon="icons.appIcons.shoppingBag"
             class="w-full"
             required
           />
-        </div>
+        </UFormField>
 
         <!-- Botones de Acción -->
-        <div class="flex items-center justify-end gap-3 pt-3 border-t border-muted/20">
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">
           <UButton
             color="neutral"
             variant="ghost"
@@ -371,7 +394,7 @@ const submitGasto = async () => {
             type="submit"
             color="primary"
             :loading="loading"
-            :icon="isEditing ? 'i-lucide-save' : 'i-lucide-plus'"
+            :icon="isEditing ? icons.appIcons.save : icons.ui.icons.plus"
             :label="isEditing ? 'Guardar Cambios' : 'Registrar Gasto'"
           />
         </div>
