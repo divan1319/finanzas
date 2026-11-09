@@ -167,7 +167,7 @@ const resetData = async () => {
 
 <template>
   <div class="min-h-screen bg-default text-default">
-    <header class="sticky top-0 z-40 border-b border-default bg-default/95 backdrop-blur">
+    <header class="relative z-40 border-b border-default bg-default/95 backdrop-blur xl:sticky xl:top-0">
       <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
         <NuxtLink
           to="/"
@@ -207,9 +207,10 @@ const resetData = async () => {
       </div>
     </header>
 
+    <!-- .app-content owns bottom padding to keep content above the mobile dock. -->
     <main
       id="main-content"
-      class="app-content mx-auto w-full min-w-0 max-w-7xl px-4 py-5 sm:px-6 sm:py-6"
+      class="app-content mx-auto w-full min-w-0 max-w-7xl px-4 pt-5 sm:px-6 sm:pt-6"
     >
       <OfflineSyncBanner class="mb-4" />
       <slot />
