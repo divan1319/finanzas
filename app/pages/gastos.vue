@@ -227,7 +227,7 @@ const deleteGasto = async (id: number) => {
     </UCard>
 
     <!-- Resumen de resultados filtrados -->
-    <div class="flex items-center justify-between px-2 text-xs text-muted">
+    <div class="flex flex-wrap items-center justify-between gap-2 px-2 text-xs text-muted">
       <span>Mostrando {{ gastosData?.cantidad || 0 }} movimientos</span>
       <span>
         Total filtrado:
@@ -270,100 +270,109 @@ const deleteGasto = async (id: number) => {
 
       <div
         v-else
-        class="overflow-x-auto"
+        class="min-w-0"
       >
-        <table class="data-table">
-          <thead class="text-xs text-muted uppercase bg-muted border-b border-default">
-            <tr>
-              <th class="py-3 px-4 font-semibold">
-                Fecha
-              </th>
-              <th class="py-3 px-4 font-semibold">
-                Tarjeta
-              </th>
-              <th class="py-3 px-4 font-semibold">
-                Descripción
-              </th>
-              <th class="py-3 px-4 font-semibold">
-                Categoría
-              </th>
-              <th class="py-3 px-4 font-semibold text-right">
-                Monto
-              </th>
-              <th class="py-3 px-4 font-semibold text-center">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-default">
-            <tr
-              v-for="g in gastosData.gastos"
-              :key="g.id"
-              class="hover:bg-muted transition-colors"
-            >
-              <td class="py-3.5 px-4 font-medium whitespace-nowrap">
-                {{ formatDate(g.fecha) }}
-              </td>
-              <td class="py-3.5 px-4 whitespace-nowrap">
-                <UBadge
-                  color="neutral"
-                  variant="subtle"
-                  size="sm"
-                >
-                  <CardIdentifier
-                    :name="g.tarjeta_nombre || 'Tarjeta'"
-                    :color="g.tarjeta_color"
-                  />
-                </UBadge>
-              </td>
-              <td class="py-3.5 px-4 font-medium text-highlighted max-w-[260px]">
-                <div class="truncate">
-                  {{ g.descripcion }}
-                </div>
-                <div
-                  v-if="g.periodoPagoInfo"
-                  class="text-[11px] font-normal flex items-center gap-1 mt-0.5"
-                  :class="g.periodoPagoInfo.esDiferido ? 'text-info font-medium' : 'text-muted'"
-                >
-                  <UIcon
-                    :name="g.periodoPagoInfo.esDiferido ? icons.appIcons.calendarClock : icons.appIcons.calendarCheck"
-                    class="w-3 h-3 shrink-0"
-                  />
-                  <span class="truncate">{{ g.periodoPagoInfo.etiquetaPago }}</span>
-                </div>
-              </td>
-              <td class="py-3.5 px-4 text-muted whitespace-nowrap">
-                <span class="inline-flex items-center gap-1.5 text-xs bg-muted px-2 py-0.5 rounded-md">
-                  {{ g.categoria || 'General' }}
-                </span>
-              </td>
-              <td class="py-3.5 px-4 text-right font-extrabold text-highlighted whitespace-nowrap">
-                {{ formatCurrency(g.monto) }}
-              </td>
-              <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                <div class="flex items-center justify-center gap-1">
-                  <UButton
-                    aria-label="Editar gasto"
-                    size="xs"
+        <ExpenseList
+          :gastos="gastosData.gastos"
+          :deleting-id="deletingId"
+          class="lg:hidden px-4"
+          @edit="openEditExpenseModal"
+          @delete="deleteGasto"
+        />
+        <div class="hidden overflow-x-auto lg:block">
+          <table class="data-table">
+            <thead class="text-xs text-muted uppercase bg-muted border-b border-default">
+              <tr>
+                <th class="py-3 px-4 font-semibold">
+                  Fecha
+                </th>
+                <th class="py-3 px-4 font-semibold">
+                  Tarjeta
+                </th>
+                <th class="py-3 px-4 font-semibold">
+                  Descripción
+                </th>
+                <th class="py-3 px-4 font-semibold">
+                  Categoría
+                </th>
+                <th class="py-3 px-4 font-semibold text-right">
+                  Monto
+                </th>
+                <th class="py-3 px-4 font-semibold text-center">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-default">
+              <tr
+                v-for="g in gastosData.gastos"
+                :key="g.id"
+                class="hover:bg-muted transition-colors"
+              >
+                <td class="py-3.5 px-4 font-medium whitespace-nowrap">
+                  {{ formatDate(g.fecha) }}
+                </td>
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <UBadge
                     color="neutral"
-                    variant="ghost"
-                    :icon="icons.ui.icons.edit"
-                    @click="openEditExpenseModal(g)"
-                  />
-                  <UButton
-                    aria-label="Eliminar gasto"
-                    size="xs"
-                    color="error"
-                    variant="ghost"
-                    :icon="icons.ui.icons.trash"
-                    :loading="deletingId === g.id"
-                    @click="deleteGasto(g.id)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                    variant="subtle"
+                    size="sm"
+                  >
+                    <CardIdentifier
+                      :name="g.tarjeta_nombre || 'Tarjeta'"
+                      :color="g.tarjeta_color"
+                    />
+                  </UBadge>
+                </td>
+                <td class="py-3.5 px-4 font-medium text-highlighted max-w-[260px]">
+                  <div class="truncate">
+                    {{ g.descripcion }}
+                  </div>
+                  <div
+                    v-if="g.periodoPagoInfo"
+                    class="text-[11px] font-normal flex items-center gap-1 mt-0.5"
+                    :class="g.periodoPagoInfo.esDiferido ? 'text-info font-medium' : 'text-muted'"
+                  >
+                    <UIcon
+                      :name="g.periodoPagoInfo.esDiferido ? icons.appIcons.calendarClock : icons.appIcons.calendarCheck"
+                      class="w-3 h-3 shrink-0"
+                    />
+                    <span class="truncate">{{ g.periodoPagoInfo.etiquetaPago }}</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-4 text-muted whitespace-nowrap">
+                  <span class="inline-flex items-center gap-1.5 text-xs bg-muted px-2 py-0.5 rounded-md">
+                    {{ g.categoria || 'General' }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right font-extrabold text-highlighted whitespace-nowrap">
+                  {{ formatCurrency(g.monto) }}
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <div class="flex items-center justify-center gap-1">
+                    <UButton
+                      aria-label="Editar gasto"
+                      size="xs"
+                      color="neutral"
+                      variant="ghost"
+                      :icon="icons.ui.icons.edit"
+                      @click="openEditExpenseModal(g)"
+                    />
+                    <UButton
+                      aria-label="Eliminar gasto"
+                      size="xs"
+                      color="error"
+                      variant="ghost"
+                      :icon="icons.ui.icons.trash"
+                      :loading="deletingId === g.id"
+                      @click="deleteGasto(g.id)"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Footer de Paginación -->
@@ -371,14 +380,14 @@ const deleteGasto = async (id: number) => {
         v-if="totalGastos > 0"
         class="px-4 py-3 border-t border-default bg-muted flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted"
       >
-        <div class="flex items-center gap-2">
+        <div class="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto">
           <span>
             Mostrando {{ (page - 1) * itemsPerPage + 1 }} – {{ Math.min(page * itemsPerPage, totalGastos) }} de {{ totalGastos }} gastos
           </span>
           <USelect
             v-model="itemsPerPage"
             :items="[5, 10, 20, 50].map(value => ({ label: `${value} por pág.`, value }))"
-            class="w-full"
+            class="w-36 shrink-0"
             aria-label="Gastos por página"
             @update:model-value="page = 1"
           />

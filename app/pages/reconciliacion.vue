@@ -265,66 +265,124 @@ const deleteReconciliacion = async (id: number) => {
       </p>
       <div
         v-else
-        class="overflow-x-auto"
+        class="min-w-0"
       >
-        <table class="data-table">
-          <caption class="sr-only">
-            Historial de reconciliaciones bancarias
-          </caption>
-          <thead>
-            <tr>
-              <th>Tarjeta / ciclo</th><th class="text-right">
-                Banco
-              </th><th class="text-right">
-                Aplicación
-              </th><th class="text-right">
-                Diferencia
-              </th><th>Notas</th><th><span class="sr-only">Acciones</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="rec in reconciliacionData.historial"
-              :key="rec.id"
+        <ul
+          class="divide-y divide-default px-4 lg:hidden"
+          aria-label="Auditorías guardadas"
+        >
+          <li
+            v-for="rec in reconciliacionData.historial"
+            :key="rec.id"
+            class="min-w-0 space-y-3 py-4"
+          >
+            <CardIdentifier
+              :name="rec.tarjeta_nombre"
+              :color="rec.tarjeta_color"
+              class="max-w-full text-sm font-medium"
+            />
+            <p class="text-xs text-muted">
+              {{ formatDate(rec.ciclo_inicio) }} al {{ formatDate(rec.ciclo_fin) }}
+            </p>
+            <dl class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt class="text-xs text-muted">
+                  Banco
+                </dt><dd class="mt-1 font-medium tabular-nums">
+                  {{ formatCurrency(rec.total_banco) }}
+                </dd>
+              </div><div>
+                <dt class="text-xs text-muted">
+                  Aplicación
+                </dt><dd class="mt-1 font-medium tabular-nums">
+                  {{ formatCurrency(rec.total_app_calculado) }}
+                </dd>
+              </div>
+            </dl>
+            <p
+              v-if="rec.notas"
+              class="break-words text-xs text-muted [overflow-wrap:anywhere]"
             >
-              <td class="min-w-48">
-                <CardIdentifier
-                  :name="rec.tarjeta_nombre"
-                  :color="rec.tarjeta_color"
-                /><p class="mt-1 whitespace-nowrap text-xs text-muted">
-                  {{ formatDate(rec.ciclo_inicio) }} al {{ formatDate(rec.ciclo_fin) }}
-                </p>
-              </td>
-              <td class="text-right tabular-nums">
-                {{ formatCurrency(rec.total_banco) }}
-              </td><td class="text-right tabular-nums">
-                {{ formatCurrency(rec.total_app_calculado) }}
-              </td>
-              <td class="text-right">
-                <UBadge
-                  :color="rec.diferencia === 0 ? 'success' : 'warning'"
-                  variant="subtle"
-                >
-                  {{ formatCurrency(rec.diferencia) }}
-                </UBadge>
-              </td>
-              <td class="max-w-48 truncate">
-                {{ rec.notas || '—' }}
-              </td>
-              <td>
-                <UButton
-                  :icon="icons.ui.icons.trash"
-                  color="error"
-                  variant="ghost"
-                  size="xs"
-                  aria-label="Eliminar reconciliación"
-                  :loading="deletingId === rec.id"
-                  @click="deleteReconciliacion(rec.id)"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              {{ rec.notas }}
+            </p>
+            <div class="flex items-center justify-between gap-3">
+              <UBadge
+                :color="rec.diferencia === 0 ? 'success' : 'warning'"
+                variant="subtle"
+              >
+                Diferencia: {{ formatCurrency(rec.diferencia) }}
+              </UBadge><UButton
+                :icon="icons.ui.icons.trash"
+                color="error"
+                variant="ghost"
+                aria-label="Eliminar reconciliación"
+                :loading="deletingId === rec.id"
+                class="min-h-10 min-w-10 justify-center"
+                @click="deleteReconciliacion(rec.id)"
+              />
+            </div>
+          </li>
+        </ul>
+        <div class="hidden overflow-x-auto lg:block">
+          <table class="data-table">
+            <caption class="sr-only">
+              Historial de reconciliaciones bancarias
+            </caption>
+            <thead>
+              <tr>
+                <th>Tarjeta / ciclo</th><th class="text-right">
+                  Banco
+                </th><th class="text-right">
+                  Aplicación
+                </th><th class="text-right">
+                  Diferencia
+                </th><th>Notas</th><th><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="rec in reconciliacionData.historial"
+                :key="rec.id"
+              >
+                <td class="min-w-48">
+                  <CardIdentifier
+                    :name="rec.tarjeta_nombre"
+                    :color="rec.tarjeta_color"
+                  /><p class="mt-1 whitespace-nowrap text-xs text-muted">
+                    {{ formatDate(rec.ciclo_inicio) }} al {{ formatDate(rec.ciclo_fin) }}
+                  </p>
+                </td>
+                <td class="text-right tabular-nums">
+                  {{ formatCurrency(rec.total_banco) }}
+                </td><td class="text-right tabular-nums">
+                  {{ formatCurrency(rec.total_app_calculado) }}
+                </td>
+                <td class="text-right">
+                  <UBadge
+                    :color="rec.diferencia === 0 ? 'success' : 'warning'"
+                    variant="subtle"
+                  >
+                    {{ formatCurrency(rec.diferencia) }}
+                  </UBadge>
+                </td>
+                <td class="max-w-48 truncate">
+                  {{ rec.notas || '—' }}
+                </td>
+                <td>
+                  <UButton
+                    :icon="icons.ui.icons.trash"
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    aria-label="Eliminar reconciliación"
+                    :loading="deletingId === rec.id"
+                    @click="deleteReconciliacion(rec.id)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </UCard>
   </div>

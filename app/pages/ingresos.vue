@@ -146,60 +146,93 @@ const deleteIngreso = async (id: number) => {
 
       <div
         v-else
-        class="overflow-x-auto"
+        class="min-w-0"
       >
-        <table class="data-table">
-          <thead class="text-xs text-muted uppercase bg-muted border-b border-default">
-            <tr>
-              <th class="py-3 px-4 font-semibold">
-                Fecha de Nómina
-              </th>
-              <th class="py-3 px-4 font-semibold">
-                Concepto / Descripción
-              </th>
-              <th class="py-3 px-4 font-semibold">
-                Fecha de Registro
-              </th>
-              <th class="py-3 px-4 font-semibold text-right">
-                Monto
-              </th>
-              <th class="py-3 px-4 font-semibold text-center">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-default">
-            <tr
-              v-for="ing in ingresosData.ingresos"
-              :key="ing.id"
-              class="hover:bg-muted transition-colors"
-            >
-              <td class="py-3.5 px-4 font-bold text-highlighted whitespace-nowrap">
-                {{ formatDate(ing.fecha) }}
-              </td>
-              <td class="py-3.5 px-4 text-muted">
+        <ul
+          class="divide-y divide-default px-4 lg:hidden"
+          aria-label="Ingresos"
+        >
+          <li
+            v-for="ing in ingresosData.ingresos"
+            :key="ing.id"
+            class="min-w-0 space-y-3 py-4"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <p class="min-w-0 flex-1 break-words text-sm font-medium text-highlighted [overflow-wrap:anywhere]">
                 {{ ing.descripcion || 'Nómina' }}
-              </td>
-              <td class="py-3.5 px-4 text-xs text-muted whitespace-nowrap">
-                {{ formatDate(ing.fecha_registro.slice(0, 10)) }}
-              </td>
-              <td class="py-3.5 px-4 text-right font-extrabold text-success whitespace-nowrap text-base">
-                +{{ formatCurrency(ing.monto) }}
-              </td>
-              <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                <UButton
-                  aria-label="Eliminar ingreso"
-                  size="xs"
-                  color="error"
-                  variant="ghost"
-                  :icon="icons.ui.icons.trash"
-                  :loading="deletingId === ing.id"
-                  @click="deleteIngreso(ing.id)"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </p>
+              <span class="shrink-0 text-sm font-semibold tabular-nums text-success">+{{ formatCurrency(ing.monto) }}</span>
+            </div>
+            <div class="flex items-end justify-between gap-3">
+              <div class="space-y-1 text-xs text-muted">
+                <p>Depósito: {{ formatDate(ing.fecha) }}</p><p>Registrado: {{ formatDate(ing.fecha_registro.slice(0, 10)) }}</p>
+              </div>
+              <UButton
+                :icon="icons.ui.icons.trash"
+                color="error"
+                variant="ghost"
+                aria-label="Eliminar ingreso"
+                :loading="deletingId === ing.id"
+                class="min-h-10 min-w-10 justify-center"
+                @click="deleteIngreso(ing.id)"
+              />
+            </div>
+          </li>
+        </ul>
+        <div class="hidden overflow-x-auto lg:block">
+          <table class="data-table">
+            <thead class="text-xs text-muted uppercase bg-muted border-b border-default">
+              <tr>
+                <th class="py-3 px-4 font-semibold">
+                  Fecha de Nómina
+                </th>
+                <th class="py-3 px-4 font-semibold">
+                  Concepto / Descripción
+                </th>
+                <th class="py-3 px-4 font-semibold">
+                  Fecha de Registro
+                </th>
+                <th class="py-3 px-4 font-semibold text-right">
+                  Monto
+                </th>
+                <th class="py-3 px-4 font-semibold text-center">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-default">
+              <tr
+                v-for="ing in ingresosData.ingresos"
+                :key="ing.id"
+                class="hover:bg-muted transition-colors"
+              >
+                <td class="py-3.5 px-4 font-bold text-highlighted whitespace-nowrap">
+                  {{ formatDate(ing.fecha) }}
+                </td>
+                <td class="py-3.5 px-4 text-muted">
+                  {{ ing.descripcion || 'Nómina' }}
+                </td>
+                <td class="py-3.5 px-4 text-xs text-muted whitespace-nowrap">
+                  {{ formatDate(ing.fecha_registro.slice(0, 10)) }}
+                </td>
+                <td class="py-3.5 px-4 text-right font-extrabold text-success whitespace-nowrap text-base">
+                  +{{ formatCurrency(ing.monto) }}
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                  <UButton
+                    aria-label="Eliminar ingreso"
+                    size="xs"
+                    color="error"
+                    variant="ghost"
+                    :icon="icons.ui.icons.trash"
+                    :loading="deletingId === ing.id"
+                    @click="deleteIngreso(ing.id)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </UCard>
   </div>

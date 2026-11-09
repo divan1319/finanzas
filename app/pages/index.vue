@@ -182,7 +182,7 @@ const deleteGasto = async (id: number) => {
 
       <!-- 4. Sección de Últimos Gastos Registrados -->
       <UCard :ui="{ body: 'p-4 sm:p-5 space-y-4' }">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <UIcon
@@ -242,101 +242,110 @@ const deleteGasto = async (id: number) => {
 
         <div
           v-else
-          class="overflow-x-auto"
+          class="min-w-0"
         >
-          <table class="data-table">
-            <thead class="text-xs text-muted uppercase border-b border-default">
-              <tr>
-                <th class="py-2.5 px-3 font-semibold">
-                  Fecha
-                </th>
-                <th class="py-2.5 px-3 font-semibold">
-                  Tarjeta
-                </th>
-                <th class="py-2.5 px-3 font-semibold">
-                  Descripción
-                </th>
-                <th class="py-2.5 px-3 font-semibold">
-                  Categoría
-                </th>
-                <th class="py-2.5 px-3 font-semibold text-right">
-                  Monto
-                </th>
-                <th class="py-2.5 px-3 font-semibold text-center">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-default">
-              <tr
-                v-for="gasto in dashboard.ultimosGastos"
-                :key="gasto.id"
-                class="hover:bg-muted transition-colors"
-              >
-                <td class="py-3 px-3 font-medium whitespace-nowrap">
-                  {{ formatDate(gasto.fecha) }}
-                </td>
-                <td class="py-3 px-3 whitespace-nowrap">
-                  <UBadge
-                    color="neutral"
-                    variant="subtle"
-                    size="sm"
-                  >
-                    <CardIdentifier
-                      :name="gasto.tarjeta?.nombre || 'Tarjeta'"
-                      :color="gasto.tarjeta?.color"
-                    />
-                  </UBadge>
-                </td>
-                <td class="py-3 px-3 font-medium text-highlighted max-w-[200px]">
-                  <div class="truncate">
-                    {{ gasto.descripcion }}
-                  </div>
-                  <div
-                    v-if="gasto.periodoPagoInfo"
-                    class="text-[10px] font-normal flex items-center gap-1 mt-0.5"
-                    :class="gasto.periodoPagoInfo.esDiferido ? 'text-info font-medium' : 'text-muted'"
-                  >
-                    <UIcon
-                      :name="gasto.periodoPagoInfo.esDiferido ? icons.appIcons.calendarClock : icons.appIcons.calendarCheck"
-                      class="w-3 h-3 shrink-0"
-                    />
-                    <span class="truncate">{{ gasto.periodoPagoInfo.esDiferido ? 'Diferido: se paga ' + formatDate(gasto.periodoPagoInfo.fechaPagoEstimada) : 'Corte actual' }}</span>
-                  </div>
-                </td>
-                <td class="py-3 px-3 text-muted whitespace-nowrap">
-                  <span class="inline-flex items-center gap-1 text-xs">
-                    <span class="w-1.5 h-1.5 rounded-full bg-muted" />
-                    {{ gasto.categoria || 'General' }}
-                  </span>
-                </td>
-                <td class="py-3 px-3 text-right font-bold text-highlighted whitespace-nowrap">
-                  {{ formatCurrency(gasto.monto) }}
-                </td>
-                <td class="py-3 px-3 text-center whitespace-nowrap">
-                  <div class="flex items-center justify-center gap-1">
-                    <UButton
-                      aria-label="Editar gasto"
-                      size="xs"
+          <ExpenseList
+            :gastos="dashboard.ultimosGastos"
+            :deleting-id="deletingId"
+            class="lg:hidden "
+            @edit="openEditExpenseModal"
+            @delete="deleteGasto"
+          />
+          <div class="hidden overflow-x-auto lg:block">
+            <table class="data-table">
+              <thead class="text-xs text-muted uppercase border-b border-default">
+                <tr>
+                  <th class="py-2.5 px-3 font-semibold">
+                    Fecha
+                  </th>
+                  <th class="py-2.5 px-3 font-semibold">
+                    Tarjeta
+                  </th>
+                  <th class="py-2.5 px-3 font-semibold">
+                    Descripción
+                  </th>
+                  <th class="py-2.5 px-3 font-semibold">
+                    Categoría
+                  </th>
+                  <th class="py-2.5 px-3 font-semibold text-right">
+                    Monto
+                  </th>
+                  <th class="py-2.5 px-3 font-semibold text-center">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-default">
+                <tr
+                  v-for="gasto in dashboard.ultimosGastos"
+                  :key="gasto.id"
+                  class="hover:bg-muted transition-colors"
+                >
+                  <td class="py-3 px-3 font-medium whitespace-nowrap">
+                    {{ formatDate(gasto.fecha) }}
+                  </td>
+                  <td class="py-3 px-3 whitespace-nowrap">
+                    <UBadge
                       color="neutral"
-                      variant="ghost"
-                      :icon="icons.ui.icons.edit"
-                      @click="openEditExpenseModal(gasto)"
-                    />
-                    <UButton
-                      aria-label="Eliminar gasto"
-                      size="xs"
-                      color="error"
-                      variant="ghost"
-                      :icon="icons.ui.icons.trash"
-                      :loading="deletingId === gasto.id"
-                      @click="deleteGasto(gasto.id)"
-                    />
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                      variant="subtle"
+                      size="sm"
+                    >
+                      <CardIdentifier
+                        :name="gasto.tarjeta?.nombre || 'Tarjeta'"
+                        :color="gasto.tarjeta?.color"
+                      />
+                    </UBadge>
+                  </td>
+                  <td class="py-3 px-3 font-medium text-highlighted max-w-[200px]">
+                    <div class="truncate">
+                      {{ gasto.descripcion }}
+                    </div>
+                    <div
+                      v-if="gasto.periodoPagoInfo"
+                      class="text-[10px] font-normal flex items-center gap-1 mt-0.5"
+                      :class="gasto.periodoPagoInfo.esDiferido ? 'text-info font-medium' : 'text-muted'"
+                    >
+                      <UIcon
+                        :name="gasto.periodoPagoInfo.esDiferido ? icons.appIcons.calendarClock : icons.appIcons.calendarCheck"
+                        class="w-3 h-3 shrink-0"
+                      />
+                      <span class="truncate">{{ gasto.periodoPagoInfo.esDiferido ? 'Diferido: se paga ' + formatDate(gasto.periodoPagoInfo.fechaPagoEstimada) : 'Corte actual' }}</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 text-muted whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1 text-xs">
+                      <span class="w-1.5 h-1.5 rounded-full bg-muted" />
+                      {{ gasto.categoria || 'General' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-3 text-right font-bold text-highlighted whitespace-nowrap">
+                    {{ formatCurrency(gasto.monto) }}
+                  </td>
+                  <td class="py-3 px-3 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-1">
+                      <UButton
+                        aria-label="Editar gasto"
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        :icon="icons.ui.icons.edit"
+                        @click="openEditExpenseModal(gasto)"
+                      />
+                      <UButton
+                        aria-label="Eliminar gasto"
+                        size="xs"
+                        color="error"
+                        variant="ghost"
+                        :icon="icons.ui.icons.trash"
+                        :loading="deletingId === gasto.id"
+                        @click="deleteGasto(gasto.id)"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </UCard>
     </template>
