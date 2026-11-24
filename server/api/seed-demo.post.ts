@@ -1,8 +1,20 @@
-import { db } from '../db'
-import { configuracion, gastos, ingresos, reconciliaciones, tarjetas } from '../db/schema'
+import { db, initDatabase } from '../db'
+import {
+  configuracion,
+  cuentas,
+  gastos,
+  ingresos,
+  liquidacionesTarjeta,
+  movimientosCuenta,
+  reconciliaciones,
+  tarjetas
+} from '../db/schema'
 import { eq } from 'drizzle-orm'
+import { obtenerCuentaPrincipal } from '../utils/cuentas'
 
 export default defineEventHandler(async () => {
+  await initDatabase()
+
   // 1. Asegurar tarjetas y configuración
   const listaTarjetas = await db.select().from(tarjetas)
   const tarjetaA = listaTarjetas.find(t => t.codigo === 'A')
@@ -10,6 +22,13 @@ export default defineEventHandler(async () => {
 
   if (!tarjetaA || !tarjetaB) {
     throw createError({ statusCode: 500, statusMessage: 'Tarjetas no configuradas' })
+  }
+
+  const principal = await obtenerCuentaPrincipal()
+  if (principal) {
+    await db.update(cuentas)
+      .set({ saldo_inicial: 1500 })
+      .where(eq(cuentas.id, principal.id))
   }
 
   // Actualizar límite a $2,000 USD si está en el default viejo
@@ -21,26 +40,45 @@ export default defineEventHandler(async () => {
       .where(eq(configuracion.id, firstConfig.id))
   }
 
-  // 2. Limpiar gastos, ingresos y reconciliaciones previas para demo limpio
+  // 2. Limpiar datos previos para demo limpio
+  await db.delete(liquidacionesTarjeta)
+  await db.delete(movimientosCuenta)
   await db.delete(gastos)
   await db.delete(ingresos)
   await db.delete(reconciliaciones)
 
-  // 3. Crear Ingresos de nómina en USD (ej. Julio y Agosto 2026)
-  await db.insert(ingresos).values([
+  // 3. Crear Ingresos de nómina en USD (ej. Julio y Agosto 2026) vinculados a Cuenta Principal
+  const ingresosDemo = await db.insert(ingresos).values([
     {
       fecha: '2026-07-24', // 26 julio fue domingo -> 24
       monto: 3200,
       descripcion: 'Nómina Julio (USD)',
+      cuenta_id: principal?.id ?? null,
       fecha_registro: '2026-07-24T09:00:00Z'
     },
     {
       fecha: '2026-08-26', // 26 agosto es miércoles -> 26
       monto: 3200,
       descripcion: 'Nómina Agosto (USD)',
+      cuenta_id: principal?.id ?? null,
       fecha_registro: '2026-08-26T09:15:00Z'
     }
-  ])
+  ]).returning()
+
+  if (principal) {
+    for (const ing of ingresosDemo) {
+      await db.insert(movimientosCuenta).values({
+        cuenta_id: principal.id,
+        tipo: 'entrada',
+        categoria: 'nomina',
+        monto: ing.monto,
+        fecha: ing.fecha,
+        descripcion: ing.descripcion || 'Nómina',
+        ingreso_id: ing.id,
+        created_at: ing.fecha_registro
+      })
+    }
+  }
 
   // 4. Crear Gastos de prueba en USD
   const muestraGastos = [
@@ -84,7 +122,7 @@ export default defineEventHandler(async () => {
     })
   }
 
-  // 5. Sembrar reconciliación de prueba
+  // 5. Sembrar reconciliación de prueba y su liquidación en cuenta
   await db.insert(reconciliaciones).values({
     tarjeta_id: tarjetaA.id,
     ciclo_inicio: '2026-07-06',
@@ -95,6 +133,31 @@ export default defineEventHandler(async () => {
     notas: 'Reconciliación de corte de agosto',
     fecha_registro: '2026-08-07T10:00:00Z'
   })
+
+  if (principal) {
+    const movPagoRows = await db.insert(movimientosCuenta).values({
+      cuenta_id: principal.id,
+      tipo: 'salida',
+      categoria: 'pago_tarjeta',
+      monto: 586.99,
+      fecha: '2026-08-06',
+      descripcion: `Pago ${tarjetaA.nombre} (2026-07-06 al 2026-08-05)`,
+      tarjeta_id: tarjetaA.id,
+      created_at: '2026-08-06T10:00:00Z'
+    }).returning()
+
+    await db.insert(liquidacionesTarjeta).values({
+      tarjeta_id: tarjetaA.id,
+      ciclo_inicio: '2026-07-06',
+      ciclo_fin: '2026-08-05',
+      estado: 'pagado',
+      monto_pagado: 586.99,
+      cuenta_id: principal.id,
+      movimiento_id: movPagoRows[0]!.id,
+      fecha_pago: '2026-08-06',
+      created_at: '2026-08-06T10:00:00Z'
+    })
+  }
 
   return {
     success: true,

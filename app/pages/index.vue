@@ -1,7 +1,16 @@
 <script setup lang="ts">
 const icons = useAppConfig()
 
-const { openNewExpenseModal, openEditExpenseModal, formatCurrency, formatDate, triggerRefresh, openIncomeModal } = useFinanzas()
+const {
+  openNewExpenseModal,
+  openEditExpenseModal,
+  formatCurrency,
+  formatDate,
+  triggerRefresh,
+  openIncomeModal,
+  openAccountMovementModal,
+  openVerifyCyclesModal
+} = useFinanzas()
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
@@ -40,9 +49,10 @@ const deleteGasto = async (id: number) => {
       color: 'success',
       icon: icons.ui.icons.trash
     })
-    await triggerRefresh(['dashboard', 'gastos'])
-  } catch (err: any) {
-    if (!navigator.onLine || err?.name === 'FetchError') {
+    await triggerRefresh(['dashboard', 'gastos', 'cuentas', 'cuentas-movimientos'])
+  } catch (err: unknown) {
+    const errObj = err as { name?: string, message?: string }
+    if (!navigator.onLine || errObj?.name === 'FetchError') {
       enqueueAction({
         tipo: 'gasto_delete',
         url: `/api/gastos/${id}`,
@@ -58,7 +68,7 @@ const deleteGasto = async (id: number) => {
     } else {
       toast.add({
         title: 'Error',
-        description: err?.message || 'No se pudo eliminar el gasto',
+        description: errObj?.message || 'No se pudo eliminar el gasto',
         color: 'error'
       })
     }
@@ -93,6 +103,70 @@ const deleteGasto = async (id: number) => {
         </UBadge>
       </div>
       <ActiveCardHero :tarjeta-activa="dashboard.tarjetaActiva" />
+
+      <UCard
+        v-if="dashboard.resumenCuentas?.cuentaPrincipal"
+        :ui="{ body: 'p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4' }"
+      >
+        <div class="min-w-0 space-y-1">
+          <div class="flex items-center gap-2">
+            <CardIdentifier
+              :name="dashboard.resumenCuentas.cuentaPrincipal.nombre"
+              :color="dashboard.resumenCuentas.cuentaPrincipal.color"
+              class="text-xs font-medium"
+            />
+            <UBadge
+              color="primary"
+              variant="subtle"
+              size="xs"
+            >
+              Principal
+            </UBadge>
+          </div>
+          <p
+            class="text-3xl font-semibold tracking-tight tabular-nums"
+            :class="dashboard.resumenCuentas.cuentaPrincipal.saldo_actual < 0 ? 'text-error' : 'text-highlighted'"
+          >
+            {{ formatCurrency(dashboard.resumenCuentas.cuentaPrincipal.saldo_actual) }}
+          </p>
+          <p
+            v-if="(dashboard.resumenCuentas.cuentas?.length || 0) > 1"
+            class="text-xs text-muted"
+          >
+            Total en {{ dashboard.resumenCuentas.cuentas.length }} cuentas:
+            <strong class="text-highlighted tabular-nums">{{ formatCurrency(dashboard.resumenCuentas.saldoTotal) }}</strong>
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            v-if="(dashboard.resumenCuentas.ciclosPendientesCount || 0) > 0"
+            size="sm"
+            color="warning"
+            variant="subtle"
+            :icon="icons.appIcons.calendarCheck"
+            :label="`Verificar cortes (${dashboard.resumenCuentas.ciclosPendientesCount})`"
+            @click="openVerifyCyclesModal()"
+          />
+          <UButton
+            size="sm"
+            color="neutral"
+            variant="outline"
+            :icon="icons.ui.icons.plus"
+            label="Movimiento"
+            @click="openAccountMovementModal()"
+          />
+          <UButton
+            to="/cuentas"
+            size="sm"
+            color="neutral"
+            variant="ghost"
+            :icon="icons.ui.icons.arrowRight"
+            trailing
+            label="Ver cuentas"
+          />
+        </div>
+      </UCard>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <UCard :ui="{ body: 'p-4 sm:p-5' }">
@@ -310,6 +384,16 @@ const deleteGasto = async (id: number) => {
                         class="w-3 h-3 shrink-0"
                       />
                       <span class="truncate">{{ gasto.periodoPagoInfo.esDiferido ? 'Diferido: se paga ' + formatDate(gasto.periodoPagoInfo.fechaPagoEstimada) : 'Corte actual' }}</span>
+                    </div>
+                    <div
+                      v-if="gasto.aporta_cuenta"
+                      class="text-[10px] font-medium text-success flex items-center gap-1 mt-0.5"
+                    >
+                      <UIcon
+                        :name="icons.appIcons.landmark"
+                        class="w-3 h-3 shrink-0"
+                      />
+                      <span class="truncate">Abonó {{ formatCurrency(gasto.monto_cuenta ?? gasto.monto) }} a {{ gasto.cuenta_destino_nombre || 'cuenta' }}</span>
                     </div>
                   </td>
                   <td class="py-3 px-3 text-muted whitespace-nowrap">

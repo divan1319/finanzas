@@ -1,5 +1,5 @@
 import { db, initDatabase } from '../../db'
-import { ingresos } from '../../db/schema'
+import { cuentas, ingresos } from '../../db/schema'
 import { desc } from 'drizzle-orm'
 
 export default defineEventHandler(async () => {
@@ -8,10 +8,22 @@ export default defineEventHandler(async () => {
     .from(ingresos)
     .orderBy(desc(ingresos.fecha), desc(ingresos.id))
 
+  const listaCuentas = await db.select().from(cuentas)
+  const mapCuentas = new Map(listaCuentas.map(c => [c.id, c]))
+
+  const ingresosEnriquecidos = listaIngresos.map((ing) => {
+    const cta = ing.cuenta_id ? mapCuentas.get(ing.cuenta_id) : null
+    return {
+      ...ing,
+      cuenta_nombre: cta?.nombre ?? null,
+      cuenta_color: cta?.color ?? null
+    }
+  })
+
   const total = listaIngresos.reduce((sum, item) => sum + item.monto, 0)
 
   return {
-    ingresos: listaIngresos,
+    ingresos: ingresosEnriquecidos,
     total,
     cantidad: listaIngresos.length
   }

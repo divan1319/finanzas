@@ -112,9 +112,10 @@ const deleteGasto = async (id: number) => {
       color: 'success',
       icon: icons.ui.icons.trash
     })
-    await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones'])
-  } catch (err: any) {
-    if (!navigator.onLine || err?.name === 'FetchError') {
+    await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones', 'cuentas', 'cuentas-movimientos'])
+  } catch (err: unknown) {
+    const errObj = err as { name?: string, message?: string }
+    if (!navigator.onLine || errObj?.name === 'FetchError') {
       enqueueAction({
         tipo: 'gasto_delete',
         url: `/api/gastos/${id}`,
@@ -130,7 +131,7 @@ const deleteGasto = async (id: number) => {
     } else {
       toast.add({
         title: 'Error al eliminar',
-        description: err?.message,
+        description: errObj?.message,
         color: 'error'
       })
     }
@@ -338,6 +339,16 @@ const deleteGasto = async (id: number) => {
                       class="w-3 h-3 shrink-0"
                     />
                     <span class="truncate">{{ g.periodoPagoInfo.etiquetaPago }}</span>
+                  </div>
+                  <div
+                    v-if="g.aporta_cuenta"
+                    class="text-[11px] font-medium text-success flex items-center gap-1 mt-0.5"
+                  >
+                    <UIcon
+                      :name="icons.appIcons.landmark"
+                      class="w-3 h-3 shrink-0"
+                    />
+                    <span class="truncate">Abonó {{ formatCurrency(g.monto_cuenta ?? g.monto) }} a {{ g.cuenta_destino_nombre || 'cuenta' }}</span>
                   </div>
                 </td>
                 <td class="py-3.5 px-4 text-muted whitespace-nowrap">

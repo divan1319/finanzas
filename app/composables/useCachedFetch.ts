@@ -1,5 +1,10 @@
-import type { NitroFetchRequest, AvailableRouterMethod } from 'nitropack'
-import type { AsyncData, FetchResult, UseFetchOptions } from 'nuxt/app'
+import type {
+  AnyServerRouteMethod,
+  AsyncData,
+  FetchResult,
+  TypedFetchRequest,
+  UseFetchOptions
+} from 'nuxt/app'
 
 const CACHE_PREFIX = 'finanzas_query_cache_'
 
@@ -38,11 +43,11 @@ export function setLocalCachedData(key: string, data: any): void {
  * 3. Si hay conexión, consulta en segundo plano y actualiza el caché y la UI reactivamente.
  */
 export function useCachedFetch<
-  ResT = void,
+  ResT = unknown,
   ErrorT = Error,
-  ReqT extends NitroFetchRequest = NitroFetchRequest,
-  MethodT extends AvailableRouterMethod<ReqT> = 'get' extends AvailableRouterMethod<ReqT> ? 'get' : AvailableRouterMethod<ReqT>,
-  _ResT = ResT extends void ? FetchResult<ReqT, MethodT> : ResT,
+  ReqT extends TypedFetchRequest = TypedFetchRequest,
+  MethodT extends AnyServerRouteMethod = 'get',
+  _ResT = unknown extends ResT ? FetchResult<ReqT, MethodT> : ResT,
   DataT = _ResT
 >(
   url: ReqT | (() => ReqT),
@@ -97,6 +102,8 @@ export async function prefetchAppRoutesData() {
   const endpoints = [
     { url: '/api/configuracion', key: 'global-config' },
     { url: '/api/dashboard', key: 'dashboard' },
+    { url: '/api/cuentas', key: 'cuentas' },
+    { url: '/api/cuentas/movimientos', key: 'cuentas-movimientos' },
     { url: '/api/gastos', key: 'gastos' },
     { url: '/api/ingresos', key: 'ingresos' },
     { url: '/api/historial?meses=6', key: 'historial' },

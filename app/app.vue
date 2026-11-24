@@ -70,10 +70,13 @@ onMounted(() => {
     <!-- Modales Globales -->
     <ExpenseModal
       :tarjetas="effectiveConfig?.tarjetas"
+      :cuentas="effectiveConfig?.cuentas"
       :dia-objetivo-nomina="effectiveConfig?.configuracion?.dia_objetivo_nomina"
     />
-    <IncomeModal />
+    <IncomeModal :cuentas="effectiveConfig?.cuentas" />
     <EditBudgetModal />
+    <AccountMovementModal :cuentas="effectiveConfig?.cuentas" />
+    <VerifyCardCyclesModal :cuentas="effectiveConfig?.cuentas" />
 
     <!-- Inyección automática del Manifiesto PWA -->
     <VitePwaManifest />

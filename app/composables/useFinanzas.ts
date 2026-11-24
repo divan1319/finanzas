@@ -15,6 +15,17 @@ export const useFinanzas = () => {
   const budgetModalOpen = useState('budget_modal_open', () => false)
   const budgetModalData = useState<any>('budget_modal_data', () => null)
 
+  // Estado del modal de movimiento de cuenta
+  const accountMovementModalOpen = useState('account_movement_modal_open', () => false)
+  const accountMovementModalData = useState<{
+    tipo?: 'entrada' | 'salida'
+    cuenta_id?: number
+    categoria?: string
+  } | null>('account_movement_modal_data', () => null)
+
+  // Estado del modal verificador de cortes de tarjetas
+  const verifyCyclesModalOpen = useState('verify_cycles_modal_open', () => false)
+
   // Trigger para refrescar datos en páginas
   const refreshKey = useState('finanzas_refresh_key', () => 0)
 
@@ -67,6 +78,28 @@ export const useFinanzas = () => {
     budgetModalData.value = null
   }
 
+  const openAccountMovementModal = (prefill?: {
+    tipo?: 'entrada' | 'salida'
+    cuenta_id?: number
+    categoria?: string
+  }) => {
+    accountMovementModalData.value = prefill || null
+    accountMovementModalOpen.value = true
+  }
+
+  const closeAccountMovementModal = () => {
+    accountMovementModalOpen.value = false
+    accountMovementModalData.value = null
+  }
+
+  const openVerifyCyclesModal = () => {
+    verifyCyclesModalOpen.value = true
+  }
+
+  const closeVerifyCyclesModal = () => {
+    verifyCyclesModalOpen.value = false
+  }
+
   const formatCurrency = (val: number | null | undefined): string => {
     if (val === null || val === undefined) return '$0.00'
     return new Intl.NumberFormat('en-US', {
@@ -97,6 +130,9 @@ export const useFinanzas = () => {
     incomeModalData,
     budgetModalOpen,
     budgetModalData,
+    accountMovementModalOpen,
+    accountMovementModalData,
+    verifyCyclesModalOpen,
     refreshKey,
     triggerRefresh,
     openNewExpenseModal,
@@ -107,6 +143,10 @@ export const useFinanzas = () => {
     closeIncomeModal,
     openBudgetModal,
     closeBudgetModal,
+    openAccountMovementModal,
+    closeAccountMovementModal,
+    openVerifyCyclesModal,
+    closeVerifyCyclesModal,
     formatCurrency,
     formatDate
   }

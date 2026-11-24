@@ -5,6 +5,9 @@ interface ExpenseListItem {
   descripcion: string
   monto: number
   categoria?: string | null
+  aporta_cuenta?: boolean | null
+  cuenta_destino_nombre?: string | null
+  monto_cuenta?: number | null
   tarjeta?: { nombre: string, color?: string | null } | null
   tarjeta_nombre?: string | null
   tarjeta_color?: string | null
@@ -51,6 +54,16 @@ const { formatCurrency, formatDate } = useFinanzas()
           class="max-w-full"
         />
         <span class="break-words">{{ gasto.categoria || 'General' }}</span>
+        <span
+          v-if="gasto.aporta_cuenta"
+          class="inline-flex items-center gap-1 text-success font-medium"
+        >
+          <UIcon
+            :name="icons.appIcons.landmark"
+            class="w-3 h-3 shrink-0"
+          />
+          Abonó {{ formatCurrency(gasto.monto_cuenta ?? gasto.monto) }} a {{ gasto.cuenta_destino_nombre || 'cuenta' }}
+        </span>
       </div>
       <div class="flex items-end justify-between gap-3">
         <p

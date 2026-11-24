@@ -9,6 +9,7 @@ import {
 import { and, gte, lte, desc, eq } from 'drizzle-orm'
 import { calcularResumenDiario } from '#shared/utils/presupuestoDiario'
 import { fechaElSalvador } from '#shared/utils/fechaElSalvador'
+import { obtenerCiclosPendientesTarjetas, obtenerCuentasConSaldo } from '../utils/cuentas'
 
 export default defineEventHandler(async (event) => {
   await initDatabase()
@@ -48,11 +49,11 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(gastos.fecha), desc(gastos.id))
 
   const gastosPeriodo = todosGastos
-    .filter(g => {
+    .filter((g) => {
       const t = mapTarjetas.get(g.tarjeta_id)
       return perteneceAlPeriodoNomina(g.fecha, t, periodo, config.dia_objetivo_nomina)
     })
-    .map(g => {
+    .map((g) => {
       const t = mapTarjetas.get(g.tarjeta_id)
       const pInfo = t ? calcularPeriodoPagoGasto(g.fecha, t, config.dia_objetivo_nomina) : null
       return { ...g, tarjeta: t, periodoPagoInfo: pInfo }
@@ -80,7 +81,7 @@ export default defineEventHandler(async (event) => {
     categoriasMap.set(cat, (categoriasMap.get(cat) || 0) + g.monto)
   }
 
-  const desgloseTarjetas = listaTarjetas.map(t => {
+  const desgloseTarjetas = listaTarjetas.map((t) => {
     const total = gastosPorTarjetaMap.get(t.id) || 0
     return {
       id: t.id,
@@ -129,13 +130,33 @@ export default defineEventHandler(async (event) => {
     }))
     .sort((a, b) => b.total - a.total)
 
-  // 10. Últimos gastos (solo del período actual y máximo 5)
-  const ultimosGastos = gastosPeriodo.slice(0, 5)
+  // 10. Resumen de cuentas y ciclos pendientes de tarjetas
+  const cuentasData = await obtenerCuentasConSaldo()
+  const mapCuentas = new Map(cuentasData.cuentas.map(c => [c.id, c]))
+  const ciclosPendientes = await obtenerCiclosPendientesTarjetas(fechaConsulta, {
+    diaObjetivoNomina: config.dia_objetivo_nomina,
+    listaTarjetas,
+    todosGastos
+  })
+
+  // 11. Últimos gastos (solo del período actual y máximo 5)
+  const ultimosGastos = gastosPeriodo.slice(0, 5).map(g => ({
+    ...g,
+    aporta_cuenta: Boolean(g.aporta_cuenta),
+    cuenta_destino_nombre: g.cuenta_destino_id ? (mapCuentas.get(g.cuenta_destino_id)?.nombre ?? null) : null
+  }))
 
   return {
     fechaConsulta,
     config,
     tarjetas: listaTarjetas,
+    cuentas: cuentasData.cuentas,
+    resumenCuentas: {
+      cuentaPrincipal: cuentasData.cuentaPrincipal,
+      saldoTotal: cuentasData.saldo_total,
+      cuentas: cuentasData.cuentas,
+      ciclosPendientesCount: ciclosPendientes.length
+    },
     tarjetaActiva: {
       codigo: sugerencia.codigo,
       info: sugerencia.tarjeta,

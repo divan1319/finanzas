@@ -13,6 +13,13 @@ const props = defineProps<{
     dia_pago_propio_tipo: string
     es_principal?: boolean
   }>
+  cuentas?: Array<{
+    id: number
+    nombre: string
+    banco?: string | null
+    es_principal?: boolean
+    color?: string | null
+  }>
   diaObjetivoNomina?: number
 }>()
 
@@ -39,13 +46,28 @@ const form = ref({
   fecha: formatDateISO(new Date()),
   monto: '',
   descripcion: '',
-  categoria: 'Alimentos'
+  categoria: 'Alimentos',
+  aporta_cuenta: false,
+  cuenta_destino_id: undefined as number | undefined,
+  monto_cuenta: ''
 })
 
 const loading = ref(false)
 const manualCardOverride = ref(false)
+const manualMontoCuentaOverride = ref(false)
 
 const isEditing = computed(() => !!form.value.id)
+
+const cuentaPrincipalId = computed(() => {
+  return props.cuentas?.find(c => c.es_principal)?.id ?? props.cuentas?.[0]?.id
+})
+
+const cuentasSelectItems = computed(() => {
+  return (props.cuentas || []).map(c => ({
+    label: c.es_principal ? `${c.nombre} (Principal)` : c.nombre,
+    value: c.id
+  }))
+})
 
 // Tarjeta sugerida dinámicamente según la fecha y tarjetas
 const sugerenciaActual = computed(() => {
@@ -77,31 +99,72 @@ watch(() => form.value.fecha, (newFecha) => {
   }
 })
 
+// Sincronizar monto que entra a la cuenta con el monto del gasto mientras no se edite manualmente
+watch(() => form.value.monto, (newMonto) => {
+  if (!manualMontoCuentaOverride.value) {
+    form.value.monto_cuenta = newMonto
+  }
+})
+
+// Autoseleccionar cuenta principal y prellenar monto al activar el switch
+watch(() => form.value.aporta_cuenta, (activo) => {
+  if (activo) {
+    if (!form.value.cuenta_destino_id && cuentaPrincipalId.value) {
+      form.value.cuenta_destino_id = cuentaPrincipalId.value
+    }
+    if (!form.value.monto_cuenta && form.value.monto) {
+      form.value.monto_cuenta = form.value.monto
+    }
+  }
+})
+
 // Inicializar cuando se abre el modal
 watch(expenseModalOpen, (open) => {
   if (open) {
     manualCardOverride.value = false
     if (expenseModalData.value) {
+      const montoStr = expenseModalData.value.monto != null ? String(expenseModalData.value.monto) : ''
+      const montoCuentaStr = expenseModalData.value.monto_cuenta != null
+        ? String(expenseModalData.value.monto_cuenta)
+        : montoStr
+      manualMontoCuentaOverride.value = (
+        expenseModalData.value.monto_cuenta != null
+        && expenseModalData.value.monto != null
+        && Number(expenseModalData.value.monto_cuenta) !== Number(expenseModalData.value.monto)
+      )
       form.value = {
         id: expenseModalData.value.id || null,
         tarjeta_id: expenseModalData.value.tarjeta_id || tarjetaSugeridaId.value,
         fecha: expenseModalData.value.fecha || formatDateISO(new Date()),
-        monto: expenseModalData.value.monto != null ? String(expenseModalData.value.monto) : '',
+        monto: montoStr,
         descripcion: expenseModalData.value.descripcion || '',
-        categoria: expenseModalData.value.categoria || 'Alimentos'
+        categoria: expenseModalData.value.categoria || 'Alimentos',
+        aporta_cuenta: Boolean(expenseModalData.value.aporta_cuenta),
+        cuenta_destino_id: expenseModalData.value.cuenta_destino_id || cuentaPrincipalId.value,
+        monto_cuenta: montoCuentaStr
       }
     } else {
+      manualMontoCuentaOverride.value = false
       form.value = {
         id: null,
         tarjeta_id: tarjetaSugeridaId.value,
         fecha: formatDateISO(new Date()),
         monto: '',
         descripcion: '',
-        categoria: 'Alimentos'
+        categoria: 'Alimentos',
+        aporta_cuenta: false,
+        cuenta_destino_id: cuentaPrincipalId.value,
+        monto_cuenta: ''
       }
     }
   }
 })
+
+const onMontoCuentaInput = (val: string | number) => {
+  const str = String(val ?? '')
+  form.value.monto_cuenta = str
+  manualMontoCuentaOverride.value = (str !== form.value.monto)
+}
 
 const onTarjetaSelectChange = (val: number) => {
   form.value.tarjeta_id = val
@@ -137,12 +200,38 @@ const submitGasto = async () => {
     return
   }
 
+  let montoCuentaNum: number | null = null
+  if (form.value.aporta_cuenta) {
+    if (!form.value.cuenta_destino_id) {
+      toast.add({
+        title: 'Cuenta requerida',
+        description: 'Selecciona la cuenta donde se abonará este saldo.',
+        color: 'warning',
+        icon: icons.ui.icons.warning
+      })
+      return
+    }
+    montoCuentaNum = Number(form.value.monto_cuenta || form.value.monto)
+    if (!Number.isFinite(montoCuentaNum) || montoCuentaNum <= 0) {
+      toast.add({
+        title: 'Monto de cuenta inválido',
+        description: 'El monto que entra a la cuenta debe ser mayor a 0.',
+        color: 'error',
+        icon: icons.ui.icons.error
+      })
+      return
+    }
+  }
+
   const payload = {
     tarjeta_id: form.value.tarjeta_id,
     fecha: form.value.fecha,
     monto: montoNum,
     descripcion: form.value.descripcion,
-    categoria: form.value.categoria
+    categoria: form.value.categoria,
+    aporta_cuenta: form.value.aporta_cuenta,
+    cuenta_destino_id: form.value.aporta_cuenta ? form.value.cuenta_destino_id : null,
+    monto_cuenta: form.value.aporta_cuenta ? montoCuentaNum : null
   }
 
   // Si estamos sin conexión, guardar directamente en la cola local
@@ -192,11 +281,12 @@ const submitGasto = async () => {
       })
     }
 
-    await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones'])
+    await triggerRefresh(['dashboard', 'gastos', 'historial', 'reconciliaciones', 'cuentas', 'cuentas-movimientos'])
     closeExpenseModal()
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errObj = err as { name?: string, message?: string, statusMessage?: string, data?: { statusMessage?: string } }
     // Si falló por pérdida súbita de conexión, encolar offline
-    if (!navigator.onLine || err?.name === 'FetchError' || err?.message?.includes('fetch')) {
+    if (!navigator.onLine || errObj?.name === 'FetchError' || errObj?.message?.includes('fetch')) {
       enqueueAction({
         tipo: isEditing.value ? 'gasto_update' : 'gasto_create',
         url: isEditing.value ? `/api/gastos/${form.value.id}` : '/api/gastos',
@@ -214,7 +304,7 @@ const submitGasto = async () => {
     } else {
       toast.add({
         title: 'Error al guardar',
-        description: err?.statusMessage || err?.message || 'Ocurrió un problema al guardar el gasto.',
+        description: errObj?.data?.statusMessage || errObj?.statusMessage || errObj?.message || 'Ocurrió un problema al guardar el gasto.',
         color: 'error',
         icon: icons.ui.icons.error
       })
@@ -375,12 +465,53 @@ const submitGasto = async () => {
         >
           <UInput
             v-model="form.descripcion"
-            placeholder="Ej. Supermercado Chedraui, Gasolina, Netflix..."
+            placeholder="Ej. Supermercado Chedraui, Retiro de efectivo..."
             :icon="icons.appIcons.shoppingBag"
             class="w-full"
             required
           />
         </UFormField>
+
+        <!-- Aporte de saldo a cuenta (ej. Retiro de efectivo desde tarjeta) -->
+        <div
+          v-if="cuentasSelectItems.length > 0"
+          class="rounded-lg border border-default bg-muted/60 p-3.5 space-y-3"
+        >
+          <USwitch
+            v-model="form.aporta_cuenta"
+            label="¿Aporta saldo a una cuenta?"
+            description="Actívalo si este movimiento (ej. retiro de efectivo) ingresa dinero a tu cuenta."
+          />
+
+          <div
+            v-if="form.aporta_cuenta"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-default"
+          >
+            <UFormField label="Cuenta destino">
+              <USelect
+                v-model="form.cuenta_destino_id"
+                :items="cuentasSelectItems"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              label="Monto abonado ($ USD)"
+              hint="Editable si hubo comisión"
+            >
+              <UInput
+                :model-value="form.monto_cuenta"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                :icon="icons.appIcons.landmark"
+                class="w-full"
+                @update:model-value="onMontoCuentaInput"
+              />
+            </UFormField>
+          </div>
+        </div>
 
         <!-- Botones de Acción -->
         <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">

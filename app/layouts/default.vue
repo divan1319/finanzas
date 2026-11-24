@@ -4,7 +4,13 @@ import type { NavigationMenuItem, DropdownMenuItem } from '@nuxt/ui'
 const icons = useAppConfig()
 
 const route = useRoute()
-const { openNewExpenseModal, openIncomeModal, triggerRefresh } = useFinanzas()
+const {
+  openNewExpenseModal,
+  openIncomeModal,
+  openAccountMovementModal,
+  openVerifyCyclesModal,
+  triggerRefresh
+} = useFinanzas()
 const toast = useToast()
 
 const mobileMenuOpen = ref(false)
@@ -29,6 +35,12 @@ const navItems = computed<NavigationMenuItem[]>(() => [
     to: '/gastos',
     icon: icons.appIcons.receipt,
     active: route.path.startsWith('/gastos')
+  },
+  {
+    label: 'Cuentas',
+    to: '/cuentas',
+    icon: icons.appIcons.landmark,
+    active: route.path.startsWith('/cuentas')
   },
   {
     label: 'Ingresos y Nómina',
@@ -85,6 +97,16 @@ const actionItems = computed<DropdownMenuItem[][]>(() => [
       label: 'Registrar Nómina / Ingreso',
       icon: icons.appIcons.wallet,
       onSelect: () => openIncomeModal()
+    },
+    {
+      label: 'Movimiento en Cuenta',
+      icon: icons.appIcons.landmark,
+      onSelect: () => openAccountMovementModal()
+    },
+    {
+      label: 'Verificar Cortes de Tarjetas',
+      icon: icons.appIcons.calendarCheck,
+      onSelect: () => openVerifyCyclesModal()
     }
   ],
   [
@@ -242,15 +264,15 @@ const resetData = async () => {
           @click="openNewExpenseModal()"
         />
         <NuxtLink
-          to="/ingresos"
+          to="/cuentas"
           class="flex min-h-11 flex-col items-center justify-center gap-1 rounded-md text-xs"
-          :class="route.path === '/ingresos' ? 'bg-primary/10 text-primary' : 'text-muted'"
-          :aria-current="route.path === '/ingresos' ? 'page' : undefined"
+          :class="route.path.startsWith('/cuentas') ? 'bg-primary/10 text-primary' : 'text-muted'"
+          :aria-current="route.path.startsWith('/cuentas') ? 'page' : undefined"
         >
           <UIcon
-            :name="icons.appIcons.wallet"
+            :name="icons.appIcons.landmark"
             class="size-5"
-          />Ingresos
+          />Cuentas
         </NuxtLink>
         <button
           type="button"
@@ -292,6 +314,22 @@ const resetData = async () => {
             variant="outline"
             block
             @click="mobileMenuOpen = false; openIncomeModal()"
+          />
+          <UButton
+            :icon="icons.appIcons.landmark"
+            label="Movimiento en cuenta"
+            color="neutral"
+            variant="outline"
+            block
+            @click="mobileMenuOpen = false; openAccountMovementModal()"
+          />
+          <UButton
+            :icon="icons.appIcons.calendarCheck"
+            label="Verificar cortes de tarjetas"
+            color="neutral"
+            variant="outline"
+            block
+            @click="mobileMenuOpen = false; openVerifyCyclesModal()"
           />
           <UButton
             :icon="icons.appIcons.sparkles"

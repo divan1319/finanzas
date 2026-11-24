@@ -5,17 +5,42 @@ const icons = useAppConfig()
 
 const props = defineProps<{
   fechaSugerida?: string
+  cuentas?: Array<{
+    id: number
+    nombre: string
+    banco?: string | null
+    es_principal?: boolean
+    color?: string | null
+  }>
 }>()
 
 const { incomeModalOpen, incomeModalData, closeIncomeModal, triggerRefresh } = useFinanzas()
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
+const NO_ACCOUNT_VALUE = 0
+
+const cuentaPrincipalId = computed(() => {
+  return props.cuentas?.find(c => c.es_principal)?.id ?? props.cuentas?.[0]?.id ?? NO_ACCOUNT_VALUE
+})
+
+const cuentasSelectItems = computed(() => {
+  const list = (props.cuentas || []).map(c => ({
+    label: c.es_principal ? `${c.nombre} (Principal)` : c.nombre,
+    value: c.id
+  }))
+  return [
+    ...list,
+    { label: 'No abonar a ninguna cuenta', value: NO_ACCOUNT_VALUE }
+  ]
+})
+
 const form = ref({
   id: null as number | null,
   fecha: props.fechaSugerida || formatDateISO(new Date()),
   monto: '',
-  descripcion: 'Nómina Quincenal / Mensual'
+  descripcion: 'Nómina Quincenal / Mensual',
+  cuenta_id: NO_ACCOUNT_VALUE
 })
 
 const loading = ref(false)
@@ -25,11 +50,16 @@ const isEditing = computed(() => form.value.id !== null)
 watch(incomeModalOpen, (open) => {
   if (open) {
     errorMessage.value = ''
+    const isEdit = incomeModalData.value?.id != null
+    const cuentaInicial = isEdit
+      ? (incomeModalData.value?.cuenta_id ?? NO_ACCOUNT_VALUE)
+      : cuentaPrincipalId.value
     form.value = {
       id: incomeModalData.value?.id ?? null,
       fecha: incomeModalData.value?.fecha || props.fechaSugerida || formatDateISO(new Date()),
       monto: incomeModalData.value ? String(incomeModalData.value.monto) : '',
-      descripcion: incomeModalData.value?.descripcion ?? 'Nómina'
+      descripcion: incomeModalData.value?.descripcion ?? 'Nómina',
+      cuenta_id: cuentaInicial
     }
   }
 })
@@ -61,7 +91,8 @@ const submitIngreso = async () => {
   const payload = {
     fecha: form.value.fecha,
     monto: montoNum,
-    descripcion: form.value.descripcion
+    descripcion: form.value.descripcion,
+    cuenta_id: form.value.cuenta_id === NO_ACCOUNT_VALUE ? null : form.value.cuenta_id
   }
   const editing = isEditing.value
   const action = {
@@ -101,7 +132,7 @@ const submitIngreso = async () => {
       icon: icons.ui.icons.success
     })
 
-    await triggerRefresh(['dashboard', 'ingresos', 'historial'])
+    await triggerRefresh(['dashboard', 'ingresos', 'historial', 'cuentas', 'cuentas-movimientos'])
     closeIncomeModal()
   } catch (err: unknown) {
     const error = err as {
@@ -196,6 +227,20 @@ const submitIngreso = async () => {
             :icon="icons.appIcons.fileText"
             class="w-full"
           />
+        </UFormField>
+
+        <UFormField
+          v-if="(props.cuentas?.length || 0) > 0"
+          label="Cuenta de Depósito"
+        >
+          <USelect
+            v-model="form.cuenta_id"
+            :items="cuentasSelectItems"
+            class="w-full"
+          />
+          <p class="text-xs text-muted mt-1">
+            Al guardar, el monto se abonará automáticamente al saldo de la cuenta seleccionada.
+          </p>
         </UFormField>
 
         <div class="flex items-center justify-end gap-3 pt-3 border-t border-default">

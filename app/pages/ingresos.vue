@@ -5,7 +5,7 @@ const { openIncomeModal, openEditIncomeModal, formatCurrency, formatDate, trigge
 const { isOnline, enqueueAction } = useOfflineSync()
 const toast = useToast()
 
-const { data: ingresosData, pending, refresh } = useCachedFetch('/api/ingresos', {
+const { data: ingresosData, pending } = useCachedFetch('/api/ingresos', {
   key: 'ingresos'
 })
 
@@ -38,9 +38,10 @@ const deleteIngreso = async (id: number) => {
       color: 'success',
       icon: icons.ui.icons.trash
     })
-    await triggerRefresh(['dashboard', 'ingresos', 'historial'])
-  } catch (err: any) {
-    if (!navigator.onLine || err?.name === 'FetchError') {
+    await triggerRefresh(['dashboard', 'ingresos', 'historial', 'cuentas', 'cuentas-movimientos'])
+  } catch (err: unknown) {
+    const errObj = err as { name?: string, message?: string }
+    if (!navigator.onLine || errObj?.name === 'FetchError') {
       enqueueAction({
         tipo: 'ingreso_delete',
         url: `/api/ingresos/${id}`,
@@ -56,7 +57,7 @@ const deleteIngreso = async (id: number) => {
     } else {
       toast.add({
         title: 'Error al eliminar',
-        description: err?.message,
+        description: errObj?.message,
         color: 'error'
       })
     }
@@ -165,7 +166,11 @@ const deleteIngreso = async (id: number) => {
             </div>
             <div class="flex items-end justify-between gap-3">
               <div class="space-y-1 text-xs text-muted">
-                <p>Depósito: {{ formatDate(ing.fecha) }}</p><p>Registrado: {{ formatDate(ing.fecha_registro.slice(0, 10)) }}</p>
+                <p>Depósito: {{ formatDate(ing.fecha) }}</p>
+                <p v-if="ing.cuenta_nombre">
+                  Cuenta: <strong class="text-highlighted">{{ ing.cuenta_nombre }}</strong>
+                </p>
+                <p>Registrado: {{ formatDate(ing.fecha_registro.slice(0, 10)) }}</p>
               </div>
               <div class="flex shrink-0 gap-1">
                 <UButton
@@ -221,7 +226,17 @@ const deleteIngreso = async (id: number) => {
                   {{ formatDate(ing.fecha) }}
                 </td>
                 <td class="py-3.5 px-4 text-muted">
-                  {{ ing.descripcion || 'Nómina' }}
+                  <div>{{ ing.descripcion || 'Nómina' }}</div>
+                  <div
+                    v-if="ing.cuenta_nombre"
+                    class="mt-0.5 text-xs text-success flex items-center gap-1"
+                  >
+                    <UIcon
+                      :name="icons.appIcons.landmark"
+                      class="w-3 h-3 shrink-0"
+                    />
+                    <span>Abonado a {{ ing.cuenta_nombre }}</span>
+                  </div>
                 </td>
                 <td class="py-3.5 px-4 text-xs text-muted whitespace-nowrap">
                   {{ formatDate(ing.fecha_registro.slice(0, 10)) }}

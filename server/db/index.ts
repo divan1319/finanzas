@@ -60,14 +60,33 @@ export async function initDatabase() {
   `)
 
   await client.execute(`
+    CREATE TABLE IF NOT EXISTS cuentas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      banco TEXT,
+      saldo_inicial REAL NOT NULL DEFAULT 0,
+      es_principal INTEGER NOT NULL DEFAULT 0,
+      color TEXT DEFAULT 'emerald',
+      created_at TEXT NOT NULL
+    );
+  `)
+
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS ingresos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fecha TEXT NOT NULL,
       monto REAL NOT NULL,
       descripcion TEXT DEFAULT 'Nómina',
+      cuenta_id INTEGER REFERENCES cuentas(id),
       fecha_registro TEXT NOT NULL
     );
   `)
+
+  try {
+    await client.execute(`ALTER TABLE ingresos ADD COLUMN cuenta_id INTEGER REFERENCES cuentas(id);`)
+  } catch {
+    // Ignorar si la columna ya existe
+  }
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS gastos (
@@ -77,7 +96,55 @@ export async function initDatabase() {
       monto REAL NOT NULL,
       descripcion TEXT NOT NULL,
       categoria TEXT DEFAULT 'General',
+      aporta_cuenta INTEGER NOT NULL DEFAULT 0,
+      cuenta_destino_id INTEGER REFERENCES cuentas(id),
+      monto_cuenta REAL,
       created_at TEXT NOT NULL
+    );
+  `)
+
+  for (const alterSql of [
+    'ALTER TABLE gastos ADD COLUMN aporta_cuenta INTEGER NOT NULL DEFAULT 0;',
+    'ALTER TABLE gastos ADD COLUMN cuenta_destino_id INTEGER REFERENCES cuentas(id);',
+    'ALTER TABLE gastos ADD COLUMN monto_cuenta REAL;'
+  ]) {
+    try {
+      await client.execute(alterSql)
+    } catch {
+      // Ignorar si la columna ya existe
+    }
+  }
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS movimientos_cuenta (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cuenta_id INTEGER NOT NULL REFERENCES cuentas(id),
+      tipo TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      monto REAL NOT NULL,
+      fecha TEXT NOT NULL,
+      descripcion TEXT NOT NULL,
+      ingreso_id INTEGER,
+      gasto_id INTEGER,
+      tarjeta_id INTEGER,
+      transferencia_par_id INTEGER,
+      created_at TEXT NOT NULL
+    );
+  `)
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS liquidaciones_tarjeta (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tarjeta_id INTEGER NOT NULL REFERENCES tarjetas(id),
+      ciclo_inicio TEXT NOT NULL,
+      ciclo_fin TEXT NOT NULL,
+      estado TEXT NOT NULL,
+      monto_pagado REAL NOT NULL DEFAULT 0,
+      cuenta_id INTEGER REFERENCES cuentas(id),
+      movimiento_id INTEGER,
+      fecha_pago TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(tarjeta_id, ciclo_inicio, ciclo_fin)
     );
   `)
 
@@ -151,6 +218,24 @@ export async function initDatabase() {
         })
       }
     }
+  }
+
+  // Sembrar cuenta principal por defecto si no existe
+  const cuentasExist = await db.select().from(schema.cuentas)
+  if (cuentasExist.length === 0) {
+    await db.insert(schema.cuentas).values({
+      nombre: 'Cuenta Principal',
+      banco: 'Banco Principal',
+      saldo_inicial: 0,
+      es_principal: true,
+      color: 'emerald',
+      created_at: new Date().toISOString()
+    })
+  } else if (!cuentasExist.some(c => c.es_principal)) {
+    await client.execute({
+      sql: 'UPDATE cuentas SET es_principal = 1 WHERE id = ?',
+      args: [cuentasExist[0]!.id]
+    })
   }
 
   // Sembrar configuración por defecto si no existe

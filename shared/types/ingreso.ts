@@ -3,4 +3,6 @@ export interface IngresoEditable {
   fecha: string
   monto: number
   descripcion?: string | null
+  cuenta_id?: number | null
+  cuenta_nombre?: string | null
 }

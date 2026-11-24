@@ -480,3 +480,24 @@ export function cicloFacturacion(
     etiqueta
   }
 }
+
+/**
+ * Obtiene los últimos N ciclos de facturación ya cerrados antes del ciclo actual
+ */
+export function ciclosCerradosAnteriores(
+  diaCorte: number,
+  fechaRef: Date | string = new Date(),
+  cantidad = 6
+): CicloFacturacionRango[] {
+  const ciclos: CicloFacturacionRango[] = []
+  let cursor = cicloFacturacion(diaCorte, fechaRef)
+
+  for (let i = 0; i < cantidad; i++) {
+    const diaAnterior = new Date(cursor.inicioDate.getTime() - 24 * 60 * 60 * 1000)
+    const previo = cicloFacturacion(diaCorte, diaAnterior)
+    ciclos.push(previo)
+    cursor = previo
+  }
+
+  return ciclos
+}

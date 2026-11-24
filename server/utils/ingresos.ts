@@ -21,5 +21,26 @@ export function validarDatosIngreso(body: unknown) {
   if (datos.descripcion != null && typeof datos.descripcion !== 'string') {
     throw createError({ statusCode: 400, statusMessage: 'El concepto de nómina debe ser texto' })
   }
-  return { fecha, monto, descripcion: (datos.descripcion as string | null | undefined)?.trim() || 'Nómina' }
+
+  let cuentaId: number | null | undefined
+  if (datos.cuenta_id !== undefined) {
+    if (datos.cuenta_id === null || datos.cuenta_id === '' || datos.cuenta_id === 'ninguna') {
+      cuentaId = null
+    } else if (typeof datos.cuenta_id === 'number' || typeof datos.cuenta_id === 'string') {
+      const parsed = Number(datos.cuenta_id)
+      if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+        throw createError({ statusCode: 400, statusMessage: 'La cuenta de depósito no es válida' })
+      }
+      cuentaId = parsed
+    } else {
+      throw createError({ statusCode: 400, statusMessage: 'La cuenta de depósito no es válida' })
+    }
+  }
+
+  return {
+    fecha,
+    monto,
+    descripcion: (datos.descripcion as string | null | undefined)?.trim() || 'Nómina',
+    cuenta_id: cuentaId
+  }
 }

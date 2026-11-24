@@ -1,5 +1,5 @@
 import { db, initDatabase } from '../../db'
-import { configuracion, gastos, tarjetas } from '../../db/schema'
+import { configuracion, cuentas, gastos, tarjetas } from '../../db/schema'
 import {
   periodoActual,
   calcularPeriodoPagoGasto,
@@ -52,6 +52,9 @@ export default defineEventHandler(async (event) => {
     monto: gastos.monto,
     descripcion: gastos.descripcion,
     categoria: gastos.categoria,
+    aporta_cuenta: gastos.aporta_cuenta,
+    cuenta_destino_id: gastos.cuenta_destino_id,
+    monto_cuenta: gastos.monto_cuenta,
     created_at: gastos.created_at,
     tarjeta_nombre: tarjetas.nombre,
     tarjeta_codigo: tarjetas.codigo,
@@ -67,15 +70,21 @@ export default defineEventHandler(async (event) => {
     ? await queryBuilder.where(and(...conditions)).orderBy(desc(gastos.fecha), desc(gastos.id))
     : await queryBuilder.orderBy(desc(gastos.fecha), desc(gastos.id))
 
-  const results = resultsRaw.map(item => {
+  const listaCuentas = await db.select().from(cuentas)
+  const mapCuentas = new Map(listaCuentas.map(c => [c.id, c]))
+
+  const results = resultsRaw.map((item) => {
     const tarjetaInfo = {
       dia_corte: item.tarjeta_dia_corte,
       dia_pago_propio_tipo: item.tarjeta_dia_pago_propio_tipo,
       es_principal: Boolean(item.tarjeta_es_principal)
     }
     const periodoPagoInfo = calcularPeriodoPagoGasto(item.fecha, tarjetaInfo, config.dia_objetivo_nomina)
+    const cta = item.cuenta_destino_id ? mapCuentas.get(item.cuenta_destino_id) : null
     return {
       ...item,
+      aporta_cuenta: Boolean(item.aporta_cuenta),
+      cuenta_destino_nombre: cta?.nombre ?? null,
       periodoPagoInfo
     }
   })
@@ -84,7 +93,7 @@ export default defineEventHandler(async (event) => {
   const limit = query.limit !== undefined ? Math.max(1, Number(query.limit)) : undefined
 
   const resultsFiltrados = soloPeriodoActual
-    ? results.filter(item => {
+    ? results.filter((item) => {
         const tarjetaInfo = {
           dia_corte: item.tarjeta_dia_corte,
           dia_pago_propio_tipo: item.tarjeta_dia_pago_propio_tipo,

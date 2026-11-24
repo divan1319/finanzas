@@ -17,11 +17,22 @@ export const configuracion = sqliteTable('configuracion', {
   limite_gasto_periodo: real('limite_gasto_periodo').default(15000).notNull()
 })
 
+export const cuentas = sqliteTable('cuentas', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  nombre: text('nombre').notNull(),
+  banco: text('banco'),
+  saldo_inicial: real('saldo_inicial').default(0).notNull(),
+  es_principal: integer('es_principal', { mode: 'boolean' }).default(false).notNull(),
+  color: text('color').default('emerald'),
+  created_at: text('created_at').notNull()
+})
+
 export const ingresos = sqliteTable('ingresos', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   fecha: text('fecha').notNull(), // Día de nómina YYYY-MM-DD
   monto: real('monto').notNull(),
   descripcion: text('descripcion').default('Nómina'),
+  cuenta_id: integer('cuenta_id').references(() => cuentas.id),
   fecha_registro: text('fecha_registro').notNull()
 })
 
@@ -32,6 +43,37 @@ export const gastos = sqliteTable('gastos', {
   monto: real('monto').notNull(),
   descripcion: text('descripcion').notNull(),
   categoria: text('categoria').default('General'),
+  aporta_cuenta: integer('aporta_cuenta', { mode: 'boolean' }).default(false).notNull(),
+  cuenta_destino_id: integer('cuenta_destino_id').references(() => cuentas.id),
+  monto_cuenta: real('monto_cuenta'),
+  created_at: text('created_at').notNull()
+})
+
+export const movimientosCuenta = sqliteTable('movimientos_cuenta', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  cuenta_id: integer('cuenta_id').references(() => cuentas.id).notNull(),
+  tipo: text('tipo').notNull(), // 'entrada' | 'salida'
+  categoria: text('categoria').notNull(), // 'nomina' | 'transferencia' | 'aguinaldo' | 'bono' | 'retiro_tarjeta' | 'pago_tarjeta' | 'retiro_efectivo' | 'traspaso' | 'otro'
+  monto: real('monto').notNull(),
+  fecha: text('fecha').notNull(), // YYYY-MM-DD
+  descripcion: text('descripcion').notNull(),
+  ingreso_id: integer('ingreso_id'),
+  gasto_id: integer('gasto_id'),
+  tarjeta_id: integer('tarjeta_id'),
+  transferencia_par_id: integer('transferencia_par_id'),
+  created_at: text('created_at').notNull()
+})
+
+export const liquidacionesTarjeta = sqliteTable('liquidaciones_tarjeta', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  tarjeta_id: integer('tarjeta_id').references(() => tarjetas.id).notNull(),
+  ciclo_inicio: text('ciclo_inicio').notNull(),
+  ciclo_fin: text('ciclo_fin').notNull(),
+  estado: text('estado').notNull(), // 'pagado' | 'omitido'
+  monto_pagado: real('monto_pagado').default(0).notNull(),
+  cuenta_id: integer('cuenta_id').references(() => cuentas.id),
+  movimiento_id: integer('movimiento_id'),
+  fecha_pago: text('fecha_pago').notNull(),
   created_at: text('created_at').notNull()
 })
 

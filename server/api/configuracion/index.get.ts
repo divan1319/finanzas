@@ -1,5 +1,6 @@
 import { db, initDatabase } from '../../db'
 import { configuracion, tarjetas } from '../../db/schema'
+import { obtenerCuentasConSaldo } from '../../utils/cuentas'
 
 export default defineEventHandler(async () => {
   await initDatabase()
@@ -11,9 +12,12 @@ export default defineEventHandler(async () => {
   }
 
   const listaTarjetas = await db.select().from(tarjetas)
+  const { cuentas: listaCuentas, cuentaPrincipal } = await obtenerCuentasConSaldo()
 
   return {
     configuracion: config,
-    tarjetas: listaTarjetas
+    tarjetas: listaTarjetas,
+    cuentas: listaCuentas,
+    cuentaPrincipal
   }
 })
