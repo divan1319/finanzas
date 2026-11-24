@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// Tailwind mist-900 in sRGB for the native PWA splash screen.
+const pwaBackground = '#161b1d'
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
@@ -9,6 +12,12 @@ export default defineNuxtConfig({
 
   devtools: {
     enabled: true
+  },
+
+  app: {
+    head: {
+      meta: [{ name: 'theme-color', content: pwaBackground }]
+    }
   },
 
   css: ['~/assets/css/main.css'],
@@ -56,8 +65,8 @@ export default defineNuxtConfig({
       name: 'Finanzas Personales',
       short_name: 'Finanzas',
       description: 'Estrategia de 2 tarjetas, nóminas y control de gastos inteligente',
-      theme_color: '#0f172a',
-      background_color: '#020617',
+      theme_color: pwaBackground,
+      background_color: pwaBackground,
       display: 'standalone',
       orientation: 'portrait',
       start_url: '/',
